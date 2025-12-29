@@ -1,0 +1,24 @@
+dashscope
+langchain_core
+
+# Data manipulation
+pandas
+tomli
+
+
+# Computer Vision
+opencv-python
+Pillow
+
+# Cryptographic library
+cryptography
+alibabacloud-oss-v2
+
+
+# LangChain v1.0
+langchain
+langgraph
+langchain-openai
+langchain-mcp-adapters
+langsmith
+google-genai
