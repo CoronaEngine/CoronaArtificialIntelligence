@@ -10,7 +10,7 @@ from config.dataclasses.prompts import ToolPromptConfig
 
 # ===========================================================================
 # 音乐生成配置 - 默认预设
-# 实际的 api_key 应放在 InnerAgentWorkflow/ai_config/omni/base.py 中
+# 实际的 api_key 应放在 InnerAgentWorkflow/ai_config/media/base.py 中
 # ===========================================================================
 
 MUSIC_SETTINGS: Dict[str, Any] = {

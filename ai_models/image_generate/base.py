@@ -87,7 +87,6 @@ def handle_image_generation(payload: Any) -> str:
     session_id = request_data.get("session_id") or "default"
     metadata = request_data.get("metadata", {})
     cfg = get_ai_config()
-    print(cfg)
 
     # 提取 function_id，决定是否使用工作流
     function_id = extract_function_id(request_data)

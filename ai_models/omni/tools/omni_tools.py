@@ -67,7 +67,7 @@ def load_omni_tools(config: AIConfig) -> List[StructuredTool]:
         # 既无账号池也无可用的旧客户端配置
         logger.warning(
             "多模态理解不可用：未配置账号池且旧客户端配置不完整。"
-            "请检查 AIConfig 中的 omni.omni 和 providers 配置"
+            "请检查 AIConfig 中的 media.omni 和 providers 配置"
         )
         return []
 

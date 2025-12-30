@@ -72,7 +72,7 @@ def load_image_tools(config: AIConfig) -> List[StructuredTool]:
 
         logging.getLogger(__name__).warning(
             "图像生成不可用：未配置账号池且旧客户端配置不完整。"
-            "请检查 AIConfig 中的 omni.image 和 providers 配置"
+            "请检查 AIConfig 中的 media.image 和 providers 配置"
         )
         return []
 

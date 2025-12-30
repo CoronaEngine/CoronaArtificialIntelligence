@@ -80,7 +80,7 @@ def load_video_tools(config: AIConfig) -> List[StructuredTool]:
         # 既无账号池也无可用的旧客户端配置
         logger.warning(
             "视频生成不可用：未配置账号池且旧客户端配置不完整。"
-            "请检查 AIConfig 中的 omni.video 和 providers 配置"
+            "请检查 AIConfig 中的 media.video 和 providers 配置"
         )
         return []
 

@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import logging
 from typing import Any, Dict, List
-print(123)
+
 from config.ai_config import get_ai_config
 from tools.common import (
     ensure_dict,
