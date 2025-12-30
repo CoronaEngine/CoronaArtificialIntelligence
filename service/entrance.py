@@ -1,12 +1,33 @@
 import functools
+import logging
 import os
 
 import importlib
 from typing import Dict, Callable
-
+logger = logging.getLogger(__name__)
 
 class ai_entrance:
-    pass
+    def __init__(self):
+        ai_models_path = "../ai_models"
+        for item in os.listdir(ai_models_path):
+            # 检查是否是文件夹且包含 base.py
+            item_path = os.path.join(ai_models_path, item)
+            if os.path.isdir(item_path) and os.path.exists(os.path.join(item_path, "base.py")):
+                try:
+                    module_path = f"ai_models.{item}.base"
+
+                    logger.debug(f"尝试导入模块: {module_path}")
+
+                    # 导入模块
+                    module = importlib.import_module(module_path)
+                except Exception as exc:
+                    print(f"Warning: {item} not exists in ai_models.{item}, overwriting...")
+                    logger.error(f"模块导入异常: {exc}")
+
+
+from typing import Dict, Callable
+import functools
+
 
 def register_entrance(handler_name: str = None):
     """
@@ -20,7 +41,6 @@ def register_entrance(handler_name: str = None):
     def decorator(func: Callable) -> Callable:
         # 确定在 ai_entrance 中的方法名
         method_name = handler_name or func.__name__
-
         # 创建包装函数
         @functools.wraps(func)
         def wrapper(*args, **kwargs):
@@ -37,3 +57,4 @@ def register_entrance(handler_name: str = None):
 
 
     return decorator
+

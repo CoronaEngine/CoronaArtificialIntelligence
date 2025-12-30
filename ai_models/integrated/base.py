@@ -116,7 +116,7 @@ def _extract_text_parts(msg: AIMessage) -> List[Dict[str, Any]]:
     logger.debug(f"提取文本部分: {parts}")
     return parts
 
-
+@register_entrance(handler_name="handle_integrated_entrance")
 def handle_integrated_entrance(payload: Any) -> str:
     """
     统一聊天接口
