@@ -25,7 +25,7 @@ from .omni import OMNI_SETTINGS, OMNI_PROMPTS
 from ...dataclasses.prompts import MediaToolPrompts, DetectionPromptConfig
 
 # ===========================================================================
-# 目标检测默认提示词（占位配置，实际配置在 InnerAgentWorkflow/ai_config/media/detection.py）
+# 目标检测默认提示词（占位配置，实际配置在 InnerAgentWorkflow/ai_config/media/base.py）
 # ===========================================================================
 
 DETECTION_PROMPTS = DetectionPromptConfig(
@@ -54,7 +54,7 @@ MEDIA_SETTINGS: Dict[str, Any] = {
     "image": IMAGE_SETTINGS,
     "video": VIDEO_SETTINGS,
     "omni": OMNI_SETTINGS,
-    # detection 配置已迁移到 InnerAgentWorkflow/ai_config/media/detection.py
+    # detection 配置已迁移到 InnerAgentWorkflow/ai_config/media/base.py
 }
 
 # ===========================================================================

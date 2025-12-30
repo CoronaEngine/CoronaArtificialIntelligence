@@ -19,6 +19,7 @@ from service.common import (
     parse_tool_response,
 )
 from service.concurrency import session_concurrency
+from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +69,7 @@ def _extract_target_description_from_llm_content(data: Dict[str, Any]) -> str:
     logger.debug(f"提取到目标描述: {target_description}")
     return target_description
 
-
+@register_entrance(handler_name="handle_detection")
 def handle_detection(payload: Any) -> str:
     """目标检测接口，返回标准三层结构。
 

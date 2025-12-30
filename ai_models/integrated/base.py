@@ -1,4 +1,4 @@
-# file: Backend/artificial_intelligence/service/integrated.py
+# file: Backend/artificial_intelligence/service/base.py
 
 from __future__ import annotations
 
@@ -22,6 +22,7 @@ from service.common import (
     build_success_response,
 )
 from service.concurrency import session_concurrency
+from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 
@@ -283,7 +284,7 @@ def _handle_integrated_entrance_inner(
         logger.debug(f"返回错误响应: {response}")
         return response
 
-
+@register_entrance(handler_name="handle_integrated_entrance_stream")
 def handle_integrated_entrance_stream(payload: Any):
     """
     流式统一聊天接口

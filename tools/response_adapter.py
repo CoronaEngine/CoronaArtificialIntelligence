@@ -273,7 +273,7 @@ class ToolResult:
 
         # 2. 确定 session_id
         sid = _session_id_ctx.get() or session_id or get_current_session()
-        # 统一使用秒级时间戳，与其他服务（common.py, integrated.py）保持一致
+        # 统一使用秒级时间戳，与其他服务（common.py, base.py）保持一致
         sent_time = int(time.time())
 
         return {

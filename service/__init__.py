@@ -9,53 +9,53 @@ AI Service 子包
 def __getattr__(name: str):
     """延迟导入以避免循环依赖"""
     if name == "handle_integrated_entrance":
-        from service.integrated import (
+        from ai_models.integrated.base import (
             handle_integrated_entrance,
         )
 
         return handle_integrated_entrance
     elif name == "handle_integrated_entrance_stream":
-        from service.integrated import (
+        from ai_models.integrated.base import (
             handle_integrated_entrance_stream,
         )
 
         return handle_integrated_entrance_stream
     elif name == "handle_image_generation":
-        from service.image import (
+        from ai_models.image_generate.base import (
             handle_image_generation,
         )
 
         return handle_image_generation
     elif name == "handle_video_generation":
-        from service.video import (
+        from ai_models.video_generate.base import (
             handle_video_generation,
         )
 
         return handle_video_generation
     elif name == "handle_text_generation":
-        from service.text import handle_text_generation
+        from ai_models.text_generate.base import handle_text_generation
 
         return handle_text_generation
     elif name == "handle_speech_generation":
-        from service.speech import (
+        from ai_models.speech_generate.base import (
             handle_speech_generation,
         )
 
         return handle_speech_generation
     elif name == "handle_music_generation":
-        from service.music import (
+        from ai_models.music_generate.base import (
             handle_music_generation,
         )
 
         return handle_music_generation
     elif name == "handle_detection":
-        from service.detection import (
+        from ai_models.detection.base import (
             handle_detection,
         )
 
         return handle_detection
     elif name == "handle_whiteback_detection":
-        from service.whiteback_detection import (
+        from ai_models.whiteback_detection.base import (
             handle_whiteback_detection,
         )
 
@@ -88,19 +88,3 @@ def __getattr__(name: str):
         return warmup_minimal
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
-
-__all__ = [
-    "handle_integrated_entrance",
-    "handle_image_generation",
-    "handle_video_generation",
-    "handle_text_generation",
-    "handle_speech_generation",
-    "handle_music_generation",
-    "handle_detection",
-    "handle_whiteback_detection",
-    "get_concurrency_manager",
-    "session_concurrency",
-    "get_media_registry",
-    "warmup_all",
-    "warmup_minimal",
-]

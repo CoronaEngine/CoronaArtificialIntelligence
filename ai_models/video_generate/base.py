@@ -15,82 +15,93 @@ from service.common import (
     parse_tool_response,
 )
 from service.concurrency import session_concurrency
+from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 
 
-def _extract_text(request_data: Dict[str, Any]) -> str:
-    if "text" in request_data:
-        return request_data.get("text", "")
-    llm_content = request_data.get("llm_content")
+def _extract_prompt_and_image(request_data: Dict[str, Any]) -> Dict[str, str]:
+    llm_content = request_data.get("llm_content", [])
+    prompt = ""
+    image_url = ""
     if isinstance(llm_content, list) and llm_content:
         parts = llm_content[0].get("part", [])
-        txt = "\n".join(
+        prompt_parts = [
             p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-        ).strip()
-        logger.debug(f"提取到 text: {txt}")
-        return txt
-    return ""
+        ]
+        image_parts = [
+            p.get("content_url", "") for p in parts if p.get("content_type") == "image"
+        ]
+        if prompt_parts:
+            prompt = " ".join(prompt_parts).strip()
+        if image_parts:
+            image_url = image_parts[0]
+    logger.debug(f"提取到 prompt: {prompt}, image_url: {image_url}")
+    return {"prompt": prompt, "image_url": image_url}
 
-
-def handle_speech_generation(payload: Any) -> str:
-    """语音生成三层结构。"""
+@register_entrance(handler_name="handle_video_generation")
+def handle_video_generation(payload: Any) -> str:
+    """视频生成三层结构。"""
     request_data: Dict[str, Any] = ensure_dict(payload)
-    metadata = request_data.get("metadata", {})
     session_id = request_data.get("session_id") or "default"
+    metadata = request_data.get("metadata", {})
     cfg = get_ai_config()
 
     # 使用统一的并发控制
     with session_concurrency(session_id, cfg) as acquired:
         if not acquired:
             return build_error_response(
-                interface_type="speech",
+                interface_type="video",
                 session_id=session_id,
                 metadata=metadata,
                 exc=RuntimeError("并发繁忙，请稍后重试"),
             )
-        return _handle_speech_generation_inner(request_data, session_id, metadata, cfg)
+        return _handle_video_generation_inner(request_data, session_id, metadata, cfg)
 
 
-def _handle_speech_generation_inner(
+def _handle_video_generation_inner(
     request_data: Dict[str, Any],
     session_id: str,
     metadata: Dict[str, Any],
     cfg,
 ) -> str:
-    """语音生成内部实现（在并发控制内执行）"""
+    """视频生成内部实现（在并发控制内执行）"""
     try:
-        logger.debug(f"收到语音生成请求: {request_data}")
-        text = _extract_text(request_data)
-        if not text:
-            raise ValueError("缺少待合成的文本")
+        logger.debug(f"收到视频生成请求: {request_data}")
+        extracted = _extract_prompt_and_image(request_data)
+        prompt = extracted["prompt"]
+        image_url = extracted["image_url"]
 
-        from tools.media.speech_tools import (
-            load_speech_tools,
+        if not image_url:
+            raise ValueError("缺少 prompt 或 image_url")
+        elif not prompt:
+            prompt = "生成一个图片相关的视频"
+
+        resolution = extract_parameter(request_data, "resolution", "720P")
+        prompt_extend = extract_parameter(request_data, "prompt_extend", True)
+        logger.debug(
+            f"视频生成参数: prompt={prompt}, image_url={image_url}, resolution={resolution},\
+ prompt_extend={prompt_extend}"
         )
 
-        tools = load_speech_tools(cfg)
+        from tools.media.video_tools import (
+            load_video_tools,
+        )
+
+        tools = load_video_tools(cfg)
         if not tools:
-            raise RuntimeError("TTS语音合成功能未启用或配置不完整")
-        speech_tool = tools[0]
-        tool_params = {
-            "text": text,
-            "voice_type": extract_parameter(
-                request_data, "voice_type", "zh_female_cancan_mars_bigtts"
-            ),
-            "speed_ratio": extract_parameter(request_data, "speed_ratio", 1.0),
-            "loudness_ratio": extract_parameter(request_data, "loudness_ratio", 1.0),
-            "encoding": extract_parameter(request_data, "encoding", "mp3"),
-            "rate": extract_parameter(request_data, "rate", 24000),
-            "max_wait_seconds": extract_parameter(request_data, "max_wait_seconds", 60),
-            "poll_interval": extract_parameter(request_data, "poll_interval", 2.0),
-        }
-        logger.debug(f"speech_tool 参数: {tool_params}")
+            raise RuntimeError("视频生成功能未启用或配置不完整")
+        video_tool = tools[0]
         with session_context(session_id) as sid:
             logger.debug(f"进入 session_context: {sid}")
-            result_json = speech_tool.func(**tool_params)
+            result_json = video_tool.func(
+                prompt=prompt,
+                image_url=image_url,
+                resolution=resolution,
+                prompt_extend=prompt_extend,
+            )
             session_id = sid
-        logger.debug(f"speech_tool 返回: {result_json}")
+        logger.debug(f"video_tool 返回: {result_json}")
 
         # 解析 Tool 返回的 Envelope JSON
         tool_envelope = parse_tool_response(result_json)
@@ -99,14 +110,14 @@ def _handle_speech_generation_inner(
         # 检查错误
         if tool_envelope.get("error_code", 0) != 0:
             error_msg = tool_envelope.get("status_info", "未知错误")
-            logger.error(f"语音合成失败: {error_msg}")
-            raise RuntimeError(f"语音合成失败: {error_msg}")
+            logger.error(f"视频生成失败: {error_msg}")
+            raise RuntimeError(f"视频生成失败: {error_msg}")
 
         # 提取 llm_content
         llm_content = tool_envelope.get("llm_content", [])
         if not llm_content:
-            logger.error("语音合成未返回有效内容")
-            raise RuntimeError("语音合成未返回有效内容")
+            logger.error("视频生成未返回有效内容")
+            raise RuntimeError("视频生成未返回有效内容")
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
@@ -124,8 +135,8 @@ def _handle_speech_generation_inner(
             if "parameter" in part:
                 original_param = part["parameter"]
                 cleaned_param = {}
-                if "speech_type" in original_param:
-                    cleaned_param["speech_type"] = original_param["speech_type"]
+                if "resolution" in original_param:
+                    cleaned_param["resolution"] = original_param["resolution"]
                 if "duration" in original_param:
                     cleaned_param["duration"] = original_param["duration"]
                 if cleaned_param:
@@ -137,8 +148,8 @@ def _handle_speech_generation_inner(
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:
-            logger.error("语音合成未返回有效的音频部分")
-            raise RuntimeError("语音合成未返回有效的音频部分")
+            logger.error("视频生成未返回有效的视频部分")
+            raise RuntimeError("视频生成未返回有效的视频部分")
 
         # 解析 parts 中的 fileid:// URL（返回真实 OSS URL 给用户）
         from tools.response_adapter import (
@@ -151,22 +162,22 @@ def _handle_speech_generation_inner(
         except Exception as e:
             logger.error(f"解析 parts 中的 file_id 失败: {e}")
             # 解析失败时抛出异常，触发错误响应
-            raise RuntimeError(f"语音资源解析失败: {e}") from e
+            raise RuntimeError(f"视频资源解析失败: {e}") from e
 
         return build_success_response(
-            interface_type="speech",
+            interface_type="video",
             session_id=session_id,
             metadata=metadata,
             parts=cleaned_parts,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"语音生成异常: {exc}")
+        logger.error(f"视频生成异常: {exc}")
         return build_error_response(
-            interface_type="speech",
+            interface_type="video",
             session_id=session_id,
             metadata=metadata,
             exc=exc,
         )
 
 
-__all__ = ["handle_speech_generation"]
+__all__ = ["handle_video_generation"]

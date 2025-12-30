@@ -14,11 +14,13 @@ from InnerAgentWorkflow.ai_tools.whiteback_detect_tool import (
 from service.common import (
     build_success_response,
 )
+from service.entrance import register_entrance
 
 # 日志配置
 logger = logging.getLogger(__name__)
 
 
+@register_entrance(handler_name="handle_whiteback_detection")
 def handle_whiteback_detection(request_data: Dict[str, Any]) -> str:
     """
     处理白底图检测请求
@@ -244,3 +246,4 @@ def _build_error_response(
     }
 
     return json.dumps(response, ensure_ascii=False)
+

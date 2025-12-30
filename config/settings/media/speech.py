@@ -10,7 +10,7 @@ from ...dataclasses.prompts import ToolPromptConfig
 
 # ===========================================================================
 # TTS 配置 - 默认预设
-# 实际的 appid 和 token 应放在 InnerAgentWorkflow/ai_config/media/speech.py 中
+# 实际的 appid 和 token 应放在 InnerAgentWorkflow/ai_config/media/base.py 中
 # ===========================================================================
 
 TTS_SETTINGS: Dict[str, Any] = {

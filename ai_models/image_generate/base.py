@@ -15,6 +15,7 @@ from service.common import (
     parse_tool_response,
 )
 from service.concurrency import session_concurrency
+from service.entrance import register_entrance
 from service.workflow_executor import (
     extract_function_id,
     execute_workflow,
@@ -74,7 +75,7 @@ def _extract_images(request_data: Dict[str, Any]) -> List[str]:
     logger.debug(f"提取到图片 URL 列表: {image_urls}")
     return image_urls
 
-
+@register_entrance(handler_name="handle_image_generation")
 def handle_image_generation(payload: Any) -> str:
     """图像生成，返回三层结构。
 

@@ -17,6 +17,7 @@ from service.common import (
     parse_tool_response,
 )
 from service.concurrency import session_concurrency
+from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 
@@ -44,7 +45,7 @@ def _extract_prompt_from_llm_content(data: Dict[str, Any]) -> str:
     logger.debug(f"提取到 prompt: {prompt}")
     return prompt
 
-
+@register_entrance(handler_name="handle_text_generation")
 def handle_text_generation(payload: Any) -> str:
     """文本生成三层结构。"""
     request_data: Dict[str, Any] = ensure_dict(payload)

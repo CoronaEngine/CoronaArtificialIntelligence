@@ -15,92 +15,82 @@ from service.common import (
     parse_tool_response,
 )
 from service.concurrency import session_concurrency
+from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 
 
-def _extract_prompt_and_image(request_data: Dict[str, Any]) -> Dict[str, str]:
-    llm_content = request_data.get("llm_content", [])
-    prompt = ""
-    image_url = ""
+def _extract_prompt(request_data: Dict[str, Any]) -> str:
+    if "prompt" in request_data:
+        return request_data.get("prompt", "")
+    llm_content = request_data.get("llm_content")
     if isinstance(llm_content, list) and llm_content:
         parts = llm_content[0].get("part", [])
-        prompt_parts = [
+        prompt = "\n".join(
             p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-        ]
-        image_parts = [
-            p.get("content_url", "") for p in parts if p.get("content_type") == "image"
-        ]
-        if prompt_parts:
-            prompt = " ".join(prompt_parts).strip()
-        if image_parts:
-            image_url = image_parts[0]
-    logger.debug(f"提取到 prompt: {prompt}, image_url: {image_url}")
-    return {"prompt": prompt, "image_url": image_url}
+        ).strip()
+        logger.debug(f"提取到 prompt: {prompt}")
+        return prompt
+    return ""
 
-
-def handle_video_generation(payload: Any) -> str:
-    """视频生成三层结构。"""
+@register_entrance(handler_name="handle_music_generation")
+def handle_music_generation(payload: Any) -> str:
+    """音乐生成三层结构。"""
     request_data: Dict[str, Any] = ensure_dict(payload)
-    session_id = request_data.get("session_id") or "default"
     metadata = request_data.get("metadata", {})
+    session_id = request_data.get("session_id") or "default"
     cfg = get_ai_config()
 
     # 使用统一的并发控制
     with session_concurrency(session_id, cfg) as acquired:
         if not acquired:
             return build_error_response(
-                interface_type="video",
+                interface_type="music",
                 session_id=session_id,
                 metadata=metadata,
                 exc=RuntimeError("并发繁忙，请稍后重试"),
             )
-        return _handle_video_generation_inner(request_data, session_id, metadata, cfg)
+        return _handle_music_generation_inner(request_data, session_id, metadata, cfg)
 
 
-def _handle_video_generation_inner(
+def _handle_music_generation_inner(
     request_data: Dict[str, Any],
     session_id: str,
     metadata: Dict[str, Any],
     cfg,
 ) -> str:
-    """视频生成内部实现（在并发控制内执行）"""
+    """音乐生成内部实现（在并发控制内执行）"""
     try:
-        logger.debug(f"收到视频生成请求: {request_data}")
-        extracted = _extract_prompt_and_image(request_data)
-        prompt = extracted["prompt"]
-        image_url = extracted["image_url"]
+        logger.debug(f"收到音乐生成请求: {request_data}")
+        prompt = _extract_prompt(request_data)
+        if not prompt:
+            raise ValueError("缺少音乐生成的 prompt")
 
-        if not image_url:
-            raise ValueError("缺少 prompt 或 image_url")
-        elif not prompt:
-            prompt = "生成一个图片相关的视频"
-
-        resolution = extract_parameter(request_data, "resolution", "720P")
-        prompt_extend = extract_parameter(request_data, "prompt_extend", True)
-        logger.debug(
-            f"视频生成参数: prompt={prompt}, image_url={image_url}, resolution={resolution},\
- prompt_extend={prompt_extend}"
+        from tools.media.music_tools import (
+            load_music_tools,
         )
 
-        from tools.media.video_tools import (
-            load_video_tools,
-        )
-
-        tools = load_video_tools(cfg)
+        tools = load_music_tools(cfg)
         if not tools:
-            raise RuntimeError("视频生成功能未启用或配置不完整")
-        video_tool = tools[0]
+            raise RuntimeError("BGM音乐生成功能未启用或配置不完整")
+        music_tool = tools[0]
+        tool_params = {
+            "prompt": prompt,
+            "style": extract_parameter(request_data, "style", ""),
+            "model": extract_parameter(request_data, "model", "V5"),
+            "duration": extract_parameter(request_data, "duration", 20),
+            "wait": extract_parameter(request_data, "wait", True),
+            "max_wait_seconds": extract_parameter(
+                request_data, "max_wait_seconds", 150
+            ),
+            "poll_interval": extract_parameter(request_data, "poll_interval", 5.0),
+        }
+        logger.debug(f"music_tool 参数: {tool_params}")
         with session_context(session_id) as sid:
             logger.debug(f"进入 session_context: {sid}")
-            result_json = video_tool.func(
-                prompt=prompt,
-                image_url=image_url,
-                resolution=resolution,
-                prompt_extend=prompt_extend,
-            )
+            result_json = music_tool.func(**tool_params)
             session_id = sid
-        logger.debug(f"video_tool 返回: {result_json}")
+        logger.debug(f"music_tool 返回: {result_json}")
 
         # 解析 Tool 返回的 Envelope JSON
         tool_envelope = parse_tool_response(result_json)
@@ -109,14 +99,14 @@ def _handle_video_generation_inner(
         # 检查错误
         if tool_envelope.get("error_code", 0) != 0:
             error_msg = tool_envelope.get("status_info", "未知错误")
-            logger.error(f"视频生成失败: {error_msg}")
-            raise RuntimeError(f"视频生成失败: {error_msg}")
+            logger.error(f"音乐生成失败: {error_msg}")
+            raise RuntimeError(f"音乐生成失败: {error_msg}")
 
         # 提取 llm_content
         llm_content = tool_envelope.get("llm_content", [])
         if not llm_content:
-            logger.error("视频生成未返回有效内容")
-            raise RuntimeError("视频生成未返回有效内容")
+            logger.error("音乐生成未返回有效内容")
+            raise RuntimeError("音乐生成未返回有效内容")
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
@@ -134,8 +124,8 @@ def _handle_video_generation_inner(
             if "parameter" in part:
                 original_param = part["parameter"]
                 cleaned_param = {}
-                if "resolution" in original_param:
-                    cleaned_param["resolution"] = original_param["resolution"]
+                if "music_style" in original_param:
+                    cleaned_param["music_style"] = original_param["music_style"]
                 if "duration" in original_param:
                     cleaned_param["duration"] = original_param["duration"]
                 if cleaned_param:
@@ -147,8 +137,8 @@ def _handle_video_generation_inner(
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:
-            logger.error("视频生成未返回有效的视频部分")
-            raise RuntimeError("视频生成未返回有效的视频部分")
+            logger.error("音乐生成未返回有效的音频部分")
+            raise RuntimeError("音乐生成未返回有效的音频部分")
 
         # 解析 parts 中的 fileid:// URL（返回真实 OSS URL 给用户）
         from tools.response_adapter import (
@@ -161,22 +151,22 @@ def _handle_video_generation_inner(
         except Exception as e:
             logger.error(f"解析 parts 中的 file_id 失败: {e}")
             # 解析失败时抛出异常，触发错误响应
-            raise RuntimeError(f"视频资源解析失败: {e}") from e
+            raise RuntimeError(f"音乐资源解析失败: {e}") from e
 
         return build_success_response(
-            interface_type="video",
+            interface_type="music",
             session_id=session_id,
             metadata=metadata,
             parts=cleaned_parts,
         )
     except Exception as exc:  # noqa: BLE001
-        logger.error(f"视频生成异常: {exc}")
+        logger.error(f"音乐生成异常: {exc}")
         return build_error_response(
-            interface_type="video",
+            interface_type="music",
             session_id=session_id,
             metadata=metadata,
             exc=exc,
         )
 
 
-__all__ = ["handle_video_generation"]
+__all__ = ["handle_music_generation"]
