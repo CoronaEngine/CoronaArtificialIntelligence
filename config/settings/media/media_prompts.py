@@ -1,28 +1,14 @@
-"""
-媒体工具配置模块
-
-整合所有媒体生成相关的配置和提示词：
-- image: 图像生成
-- video: 视频生成
-- speech: 语音合成 (TTS)
-- music: 音乐生成
-- omni: 多模态理解
-- detection: 目标检测（默认占位配置）
-"""
-
 from __future__ import annotations
 
 from typing import Any, Dict
 
-# 子模块导入
+
+from ...dataclasses.prompts import MediaToolPrompts, DetectionPromptConfig
 from ai_models.image_generate.configs.settings import IMAGE_SETTINGS, IMAGE_PROMPTS
 from ai_models.video_generate.configs.settings import VIDEO_SETTINGS, VIDEO_PROMPTS
 from ai_models.speech_generate.configs.settings import TTS_SETTINGS, SPEECH_PROMPTS
 from ai_models.music_generate.configs.settings import MUSIC_SETTINGS, MUSIC_PROMPTS
 from ai_models.omni.configs.settings import OMNI_SETTINGS, OMNI_PROMPTS
-# 数据类导入
-from ...dataclasses.prompts import MediaToolPrompts, DetectionPromptConfig
-
 # ===========================================================================
 # 目标检测默认提示词（占位配置，实际配置在 InnerAgentWorkflow/ai_config/omni/base.py）
 # ===========================================================================
@@ -68,26 +54,3 @@ MEDIA_TOOL_PROMPTS = MediaToolPrompts(
     omni=OMNI_PROMPTS,
     detection=DETECTION_PROMPTS,
 )
-
-# ===========================================================================
-# 导出
-# ===========================================================================
-
-__all__ = [
-    # 配置
-    "MEDIA_SETTINGS",
-    "TTS_SETTINGS",
-    "MUSIC_SETTINGS",
-    # 单独的设置（供内部使用）
-    "IMAGE_SETTINGS",
-    "VIDEO_SETTINGS",
-    "OMNI_SETTINGS",
-    # 提示词
-    "IMAGE_PROMPTS",
-    "VIDEO_PROMPTS",
-    "SPEECH_PROMPTS",
-    "MUSIC_PROMPTS",
-    "OMNI_PROMPTS",
-    "DETECTION_PROMPTS",
-    "MEDIA_TOOL_PROMPTS",
-]

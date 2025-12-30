@@ -6,7 +6,7 @@ import logging
 
 from config.ai_config import get_ai_config
 
-from service.common import (
+from tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
@@ -14,9 +14,9 @@ from service.common import (
     extract_parameter,
     parse_tool_response,
 )
-from service.concurrency import session_concurrency
+from tools.concurrency import session_concurrency
 from service.entrance import register_entrance
-from service.workflow_executor import (
+from tools.workflow_executor import (
     extract_function_id,
     execute_workflow,
 )
@@ -87,6 +87,7 @@ def handle_image_generation(payload: Any) -> str:
     session_id = request_data.get("session_id") or "default"
     metadata = request_data.get("metadata", {})
     cfg = get_ai_config()
+    print(cfg)
 
     # 提取 function_id，决定是否使用工作流
     function_id = extract_function_id(request_data)
@@ -126,7 +127,7 @@ def _handle_image_generation_inner(
         if not prompt:
             raise ValueError("缺少图像生成的 prompt")
 
-        from tools.media.image_tools import (
+        from ai_models.image_generate.tools.image_tools import (
             load_image_tools,
         )
 

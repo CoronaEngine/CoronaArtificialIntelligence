@@ -14,11 +14,12 @@ import os
 import threading
 from typing import Any, Dict, Optional
 
-try:
-    from .ai_settings import AI_SETTINGS, DEFAULT_SYSTEM_PROMPT
-except ImportError:
-    AI_SETTINGS = {}
-    DEFAULT_SYSTEM_PROMPT = ""
+# try:
+#     print(345)
+from .ai_settings import AI_SETTINGS, DEFAULT_SYSTEM_PROMPT
+# except ImportError:
+#     AI_SETTINGS = {}
+#     DEFAULT_SYSTEM_PROMPT = ""
 
 # ---------------------------------------------------------------------------
 # 从子模块导入数据类
@@ -113,7 +114,7 @@ def _load_ai_config_data() -> Dict[str, Any]:
 def _build_ai_config() -> AIConfig:
     """构建 AI 配置"""
     raw = _load_ai_config_data()
-
+    print(raw)
     providers = _load_providers(raw.get("providers"))
     if not providers:
         raise RuntimeError("AI 配置中至少需要声明一个 provider")
@@ -191,3 +192,4 @@ __all__ = [
     "get_ai_config",
     "reload_ai_config",
 ]
+

@@ -536,7 +536,7 @@ def get_chat_model(
         get_ai_config,
         ProviderConfig,
     )
-    from models.client_openai import build_openai_chat
+    from ai_models.text_generate.tools.client_openai import build_openai_chat
 
     config = get_ai_config()
     chat_cfg = config.chat

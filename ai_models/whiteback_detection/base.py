@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional
 from InnerAgentWorkflow.ai_tools.whiteback_detect_tool import (
     get_whiteback_detect_tool,
 )
-from service.common import (
+from tools.common import (
     build_success_response,
 )
 from service.entrance import register_entrance

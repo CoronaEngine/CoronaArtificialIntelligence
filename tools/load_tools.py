@@ -2,14 +2,14 @@
 工具加载模块
 
 统一加载所有可用工具，通过 ToolRegistry 管理：
-1. 内置工具（media/text/scene）
+1. 内置工具（omni/text/scene）
 2. 外部工具（InnerAgentWorkflow/ai_tools）
 
 工具分类：
 - test: 测试工具（无依赖）
 - text: 文案生成工具（依赖 LLM）
 - scene: 场景操作工具（依赖 scene_service）
-- media: 媒体生成工具（图像、视频、语音、音乐、多模态理解）
+- omni: 媒体生成工具（图像、视频、语音、音乐、多模态理解）
 
 使用方式：
     from tools import load_tools
@@ -75,7 +75,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 文案生成工具
     # -----------------------------------------------------------------------
-    from tools.text_tools import load_text_tools
+    from ai_models.text_generate.tools.text_tools import load_text_tools
 
     registry.register_loader(
         loader=load_text_tools,
@@ -93,7 +93,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 场景操作工具（MCP）
     # -----------------------------------------------------------------------
-    from tools.mcp import load_mcp_tools
+    from ai_models.mcp import load_mcp_tools
 
     registry.register_loader(
         loader=load_mcp_tools,
@@ -108,7 +108,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 图像生成工具
     # -----------------------------------------------------------------------
-    from tools.media.image_tools import load_image_tools
+    from ai_models.image_generate.tools.image_tools import load_image_tools
 
     registry.register_loader(
         loader=load_image_tools,
@@ -120,13 +120,13 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
             ToolDependency(DependencyType.HTTP_IMAGE, required=True),
         ],
         requires_config=True,
-        source="tools.media.image_tools",
+        source="tools.omni.image_tools",
     )
 
     # -----------------------------------------------------------------------
     # 视频生成工具
     # -----------------------------------------------------------------------
-    from tools.media.video_tools import load_video_tools
+    from ai_models.video_generate.tools.video_tools import load_video_tools
 
     registry.register_loader(
         loader=load_video_tools,
@@ -138,13 +138,13 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
             ToolDependency(DependencyType.HTTP_VIDEO, required=True),
         ],
         requires_config=True,
-        source="tools.media.video_tools",
+        source="tools.omni.video_tools",
     )
 
     # -----------------------------------------------------------------------
     # 语音合成工具
     # -----------------------------------------------------------------------
-    from tools.media.speech_tools import load_speech_tools
+    from ai_models.speech_generate.tools.speech_tools import load_speech_tools
 
     registry.register_loader(
         loader=load_speech_tools,
@@ -156,13 +156,13 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
             ToolDependency(DependencyType.HTTP_TTS, required=True),
         ],
         requires_config=True,
-        source="tools.media.speech_tools",
+        source="tools.omni.speech_tools",
     )
 
     # -----------------------------------------------------------------------
     # 音乐生成工具
     # -----------------------------------------------------------------------
-    from tools.media.music_tools import load_music_tools
+    from ai_models.music_generate.tools.music_tools import load_music_tools
 
     registry.register_loader(
         loader=load_music_tools,
@@ -174,13 +174,13 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
             ToolDependency(DependencyType.HTTP_MUSIC, required=True),
         ],
         requires_config=True,
-        source="tools.media.music_tools",
+        source="tools.omni.music_tools",
     )
 
     # -----------------------------------------------------------------------
     # 多模态理解工具
     # -----------------------------------------------------------------------
-    from tools.media.omni_tools import load_omni_tools
+    from ai_models.omni.tools.omni_tools import load_omni_tools
 
     registry.register_loader(
         loader=load_omni_tools,
@@ -191,7 +191,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
             ToolDependency(DependencyType.MEDIA_REGISTRY, required=True),
         ],
         requires_config=True,
-        source="tools.media.omni_tools",
+        source="tools.omni.omni_tools",
     )
 
 

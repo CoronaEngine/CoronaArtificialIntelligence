@@ -25,10 +25,6 @@ class ai_entrance:
                     logger.error(f"模块导入异常: {exc}")
 
 
-from typing import Dict, Callable
-import functools
-
-
 def register_entrance(handler_name: str = None):
     """
     将函数注册为 ai_entrance 的静态方法
@@ -58,3 +54,13 @@ def register_entrance(handler_name: str = None):
 
     return decorator
 
+print(ai_entrance().handle_image_generation(payload = {
+        "session_id": "test_session",
+        "llm_content": [
+            {
+                "role": "user",
+                "interface_type": "image",
+                "part": [{"content_type": "text", "content_text": "一只可爱的小猫咪"}],
+            }
+        ]
+    }))

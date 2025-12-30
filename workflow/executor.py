@@ -27,8 +27,8 @@ from workflow.adapter import (
 )
 from workflow.registry import get_workflow_registry
 from workflow.state import WorkflowState
-from service.common import build_error_response
-from service.context import (
+from tools.common import build_error_response
+from tools.context import (
     set_current_session,
     reset_current_session,
 )
@@ -118,7 +118,7 @@ def run_workflow_from_request(
     Returns:
         成功时返回响应 JSON，未找到 function_id 或未注册时返回 None
     """
-    from service.common import (
+    from tools.common import (
         ensure_dict,
         extract_parameter,
     )

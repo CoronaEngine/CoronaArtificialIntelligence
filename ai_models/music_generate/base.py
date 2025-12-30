@@ -6,7 +6,7 @@ import logging
 
 from config.ai_config import get_ai_config
 
-from service.common import (
+from tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
@@ -14,7 +14,7 @@ from service.common import (
     extract_parameter,
     parse_tool_response,
 )
-from service.concurrency import session_concurrency
+from tools.concurrency import session_concurrency
 from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
@@ -66,7 +66,7 @@ def _handle_music_generation_inner(
         if not prompt:
             raise ValueError("缺少音乐生成的 prompt")
 
-        from tools.media.music_tools import (
+        from ai_models.music_generate.tools.music_tools import (
             load_music_tools,
         )
 
@@ -167,6 +167,3 @@ def _handle_music_generation_inner(
             metadata=metadata,
             exc=exc,
         )
-
-
-__all__ = ["handle_music_generation"]

@@ -22,7 +22,7 @@ from agent.protocol import (
     wrap_part_as_assistant_message,
     build_media_history_assistant_message,
 )
-from service.context import (
+from tools.context import (
     reset_current_session,
     set_current_session,
 )

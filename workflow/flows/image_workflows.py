@@ -46,7 +46,7 @@ def _get_image_tool():
         else:
             # 回退：直接加载
             from config.ai_config import get_ai_config
-            from tools.media.image_tools import (
+            from ai_models.image_generate.tools.image_tools import (
                 load_image_tools,
             )
 

@@ -6,7 +6,7 @@ import logging
 
 from config.ai_config import get_ai_config
 
-from service.common import (
+from tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
@@ -14,7 +14,7 @@ from service.common import (
     extract_parameter,
     parse_tool_response,
 )
-from service.concurrency import session_concurrency
+from tools.concurrency import session_concurrency
 from service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
@@ -84,7 +84,7 @@ def _handle_video_generation_inner(
  prompt_extend={prompt_extend}"
         )
 
-        from tools.media.video_tools import (
+        from ai_models.video_generate.tools.video_tools import (
             load_video_tools,
         )
 

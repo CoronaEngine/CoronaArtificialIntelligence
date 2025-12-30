@@ -9,10 +9,10 @@ Models 模块
 """
 
 # 旧客户端（供降级模式和直接调用使用）
-from .client_image import LingyaImageClient
-from .client_video import DashScopeVideoClient
-from .client_speech import TTSClient
-from .client_music import SunoMusicClient
+from ai_models.image_generate.tools.client_image import LingyaImageClient
+from ai_models.video_generate.tools.client_video import DashScopeVideoClient
+from ai_models.speech_generate.tools.client_speech import TTSClient
+from ai_models.music_generate.tools.client_music import SunoMusicClient
 
 # pool 子模块的便捷导出
 # get_chat_model 现在由 pool 模块提供，自动检测池模式或降级模式
@@ -25,7 +25,7 @@ from .pool import (
 )
 
 # 保留旧的 chat_loader 入口用于直接调用（不经过池系统）
-from .chat_loader import get_chat_model as get_chat_model_legacy
+from ai_models.text_generate.tools.chat_loader import get_chat_model as get_chat_model_legacy
 
 __all__ = [
     # 模型加载（统一入口，推荐使用）

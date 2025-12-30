@@ -3,12 +3,12 @@
 
 管理 tool_name → StructuredTool 的映射，支持：
 1. 手动注册单个工具
-2. 按分类组织工具（media/text/scene/external）
+2. 按分类组织工具（omni/text/scene/external）
 3. 声明式依赖（工具可声明所需的服务/配置）
 4. 自动发现外部工具（InnerAgentWorkflow/ai_tools）
 
 分类说明：
-- media: 媒体生成工具（图像、视频、语音、音乐、检测等）
+- omni: 媒体生成工具（图像、视频、语音、音乐、检测等）
 - text: 文案生成工具（产品文案、营销文案、创意文案）
 - scene: 场景操作工具（查询、变换等）
 - external: 外部/私有工具（来自 InnerAgentWorkflow 等）
@@ -18,13 +18,13 @@
     registry = get_tool_registry()
 
     # 注册工具
-    registry.register(my_tool, category="media")
+    registry.register(my_tool, category="omni")
 
     # 获取单个工具
     tool = registry.get("detect_objects")
 
     # 按分类获取工具
-    media_tools = registry.get_by_category("media")
+    media_tools = registry.get_by_category("omni")
 
     # 获取所有工具
     all_tools = registry.list_tools()
@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 class ToolCategory(str, Enum):
     """工具分类枚举"""
 
-    MEDIA = "media"  # 媒体生成（图像、视频、语音、音乐、检测）
+    MEDIA = "omni"  # 媒体生成（图像、视频、语音、音乐、检测）
     TEXT = "text"  # 文案生成
     SCENE = "scene"  # 场景操作
     EXTERNAL = "external"  # 外部/私有工具
@@ -115,7 +115,7 @@ class ToolDependency:
         type: 依赖类型
         required: 是否必需（False 表示可选依赖）
         provider: 当 type 为 CONFIG_PROVIDER 时，指定需要的 provider 名称
-        config_path: 配置路径（如 "media.detection"）
+        config_path: 配置路径（如 "omni.detection"）
     """
 
     type: DependencyType

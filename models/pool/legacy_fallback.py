@@ -41,7 +41,7 @@ _legacy_clients_lock = threading.Lock()
 def _get_legacy_image_client():
     """获取旧图像客户端单例"""
     from config.ai_config import get_ai_config
-    from models.client_image import LingyaImageClient
+    from ai_models.image_generate.tools.client_image import LingyaImageClient
 
     config = get_ai_config()
     image_cfg = config.media.image
@@ -63,7 +63,7 @@ def _get_legacy_image_client():
 def _get_legacy_video_client():
     """获取旧视频客户端单例"""
     from config.ai_config import get_ai_config
-    from models.client_video import DashScopeVideoClient
+    from ai_models.video_generate.tools.client_video import DashScopeVideoClient
 
     config = get_ai_config()
     video_cfg = config.media.video
@@ -88,7 +88,7 @@ def _get_legacy_speech_client():
         get_ai_config,
         SpeechAppConfig,
     )
-    from models.client_speech import TTSClient
+    from ai_models.speech_generate.tools.client_speech import TTSClient
 
     config = get_ai_config()
 
@@ -110,7 +110,7 @@ def _get_legacy_music_client():
         get_ai_config,
         ProviderConfig,
     )
-    from models.client_music import SunoMusicClient
+    from ai_models.music_generate.tools.client_music import SunoMusicClient
 
     config = get_ai_config()
 
@@ -136,7 +136,7 @@ def _get_legacy_chat_client():
     返回 LangChain BaseChatModel 实例，用于 Agent 和工具调用。
     """
     from config.ai_config import get_ai_config
-    from models.chat_loader import get_chat_model
+    from ai_models.text_generate.tools.chat_loader import get_chat_model
 
     config = get_ai_config()
     chat_cfg = config.chat

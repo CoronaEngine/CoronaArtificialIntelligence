@@ -24,7 +24,7 @@ from .base import RUNTIME_SETTINGS
 from .network import NETWORK_SETTINGS, POLLING_SETTINGS
 from .session import SESSION_SETTINGS
 from .providers import PROVIDERS
-from .llm import LLM_SETTINGS, DEFAULT_SYSTEM_PROMPT
+from ai_models.text_generate.configs.settings import LLM_SETTINGS, DEFAULT_SYSTEM_PROMPT
 from .media import (
     MEDIA_SETTINGS,
     TTS_SETTINGS,
@@ -37,14 +37,14 @@ from .media import (
     DETECTION_PROMPTS,
     MEDIA_TOOL_PROMPTS,
 )
-from .text import (
+from ai_models.text_generate.configs.prompts import (
     PRODUCT_TEXT_PROMPTS,
     MARKETING_TEXT_PROMPTS,
     CREATIVE_TEXT_PROMPTS,
     TEXT_TOOL_PROMPTS,
     PLATFORM_TIPS,
 )
-from .scene import (
+from ai_models.mcp.configs.prompts import (
     SCENE_QUERY_PROMPTS,
     SCENE_TRANSFORM_PROMPTS,
     SCENE_TOOL_PROMPTS,
