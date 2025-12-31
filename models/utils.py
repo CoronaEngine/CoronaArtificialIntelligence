@@ -18,7 +18,7 @@ from typing import Any, Callable, TypeVar, Tuple, Optional
 
 from PIL import Image
 
-from config.ai_config import ProviderConfig
+from modules.providers.configs.dataclasses import ProviderConfig
 
 
 # ========== 通用客户端基类 ==========

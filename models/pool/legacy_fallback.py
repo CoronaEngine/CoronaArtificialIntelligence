@@ -27,6 +27,8 @@ from models.pool.responses import (
     MultiMediaResult,
     ChatResult,
 )
+from modules.providers.configs.dataclasses import ProviderConfig
+from modules.speech_generate.configs.dataclasses import SpeechAudioConfig, SpeechAppConfig
 
 logger = logging.getLogger(__name__)
 
@@ -41,7 +43,7 @@ _legacy_clients_lock = threading.Lock()
 def _get_legacy_image_client():
     """获取旧图像客户端单例"""
     from config.ai_config import get_ai_config
-    from ai_models.image_generate.tools.client_image import LingyaImageClient
+    from modules.image_generate.tools.client_image import LingyaImageClient
 
     config = get_ai_config()
     image_cfg = config.media.image
@@ -63,7 +65,7 @@ def _get_legacy_image_client():
 def _get_legacy_video_client():
     """获取旧视频客户端单例"""
     from config.ai_config import get_ai_config
-    from ai_models.video_generate.tools.client_video import DashScopeVideoClient
+    from modules.video_generate.tools.client_video import DashScopeVideoClient
 
     config = get_ai_config()
     video_cfg = config.media.video
@@ -86,9 +88,9 @@ def _get_legacy_speech_client():
     """获取旧语音合成客户端单例"""
     from config.ai_config import (
         get_ai_config,
-        SpeechAppConfig,
+        # SpeechAppConfig,
     )
-    from ai_models.speech_generate.tools.client_speech import TTSClient
+    from modules.speech_generate.tools.client_speech import TTSClient
 
     config = get_ai_config()
 
@@ -108,9 +110,9 @@ def _get_legacy_music_client():
     """获取旧音乐生成客户端单例"""
     from config.ai_config import (
         get_ai_config,
-        ProviderConfig,
+        # ProviderConfig,
     )
-    from ai_models.music_generate.tools.client_music import SunoMusicClient
+    from modules.music_generate.tools.client_music import SunoMusicClient
 
     config = get_ai_config()
 
@@ -136,7 +138,7 @@ def _get_legacy_chat_client():
     返回 LangChain BaseChatModel 实例，用于 Agent 和工具调用。
     """
     from config.ai_config import get_ai_config
-    from ai_models.text_generate.tools.chat_loader import get_chat_model
+    from modules.text_generate.tools.chat_loader import get_chat_model
 
     config = get_ai_config()
     chat_cfg = config.chat
@@ -346,7 +348,7 @@ def create_legacy_speech_task(
     if client is None:
         return None
 
-    from config.ai_config import SpeechAudioConfig
+    # from config.ai_config import SpeechAudioConfig
 
     def task() -> MediaResult:
         audio_config = SpeechAudioConfig(

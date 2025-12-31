@@ -25,6 +25,7 @@ from models.pool.legacy_fallback import (
     create_legacy_task,
     clear_legacy_clients,
 )
+from modules.providers.configs.dataclasses import ProviderConfig
 
 logger = logging.getLogger(__name__)
 
@@ -534,9 +535,9 @@ def get_chat_model(
     """
     from config.ai_config import (
         get_ai_config,
-        ProviderConfig,
+        # ProviderConfig,
     )
-    from ai_models.text_generate.tools.client_openai import build_openai_chat
+    from modules.text_generate.tools.client_openai import build_openai_chat
 
     config = get_ai_config()
     chat_cfg = config.chat

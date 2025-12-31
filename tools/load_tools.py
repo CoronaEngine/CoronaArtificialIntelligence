@@ -75,7 +75,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 文案生成工具
     # -----------------------------------------------------------------------
-    from ai_models.text_generate.tools.text_tools import load_text_tools
+    from modules.text_generate.tools.text_tools import load_text_tools
 
     registry.register_loader(
         loader=load_text_tools,
@@ -93,7 +93,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 场景操作工具（MCP）
     # -----------------------------------------------------------------------
-    from ai_models.mcp import load_mcp_tools
+    from modules.mcp import load_mcp_tools
 
     registry.register_loader(
         loader=load_mcp_tools,
@@ -108,7 +108,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 图像生成工具
     # -----------------------------------------------------------------------
-    from ai_models.image_generate.tools.image_tools import load_image_tools
+    from modules.image_generate.tools.image_tools import load_image_tools
 
     registry.register_loader(
         loader=load_image_tools,
@@ -126,7 +126,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 视频生成工具
     # -----------------------------------------------------------------------
-    from ai_models.video_generate.tools.video_tools import load_video_tools
+    from modules.video_generate.tools.video_tools import load_video_tools
 
     registry.register_loader(
         loader=load_video_tools,
@@ -144,7 +144,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 语音合成工具
     # -----------------------------------------------------------------------
-    from ai_models.speech_generate.tools.speech_tools import load_speech_tools
+    from modules.speech_generate.tools.speech_tools import load_speech_tools
 
     registry.register_loader(
         loader=load_speech_tools,
@@ -162,7 +162,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 音乐生成工具
     # -----------------------------------------------------------------------
-    from ai_models.music_generate.tools.music_tools import load_music_tools
+    from modules.music_generate.tools.music_tools import load_music_tools
 
     registry.register_loader(
         loader=load_music_tools,
@@ -180,7 +180,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 多模态理解工具
     # -----------------------------------------------------------------------
-    from ai_models.omni.tools.omni_tools import load_omni_tools
+    from modules.omni.tools.omni_tools import load_omni_tools
 
     registry.register_loader(
         loader=load_omni_tools,

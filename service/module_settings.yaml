@@ -1,0 +1,71 @@
+# config/module_import_order.yaml
+modules:
+  # 基础模块（必须先加载）
+  - name: runtime
+    enabled: true
+    description: "运行时配置和日志"
+
+  - name: providers
+    enabled: true
+    description: "API提供商配置"
+
+  - name: network
+    enabled: true
+    description: "网络配置"
+
+  # 核心服务模块
+  - name: session
+    enabled: true
+    description: "会话管理"
+
+  - name: polling
+    enabled: true
+    description: "轮询服务"
+
+  # 高级功能模块
+  - name: omni
+    enabled: true
+    description: "全能模型"
+
+  - name: mcp
+    enabled: true
+    description: "模型控制协议"
+
+  # AI能力模块
+  - name: text_generate
+    enabled: true
+    description: "文本生成"
+
+  - name: speech_generate
+    enabled: true
+    description: "语音生成"
+
+  - name: image_generate
+    enabled: true
+    description: "图像生成"
+
+  - name: video_generate
+    enabled: true
+    description: "视频生成"
+
+  - name: music_generate
+    enabled: true
+    description: "音乐生成"
+
+  - name: media
+    enabled: true
+    description: "媒体处理"
+
+  # 检测模块
+  - name: detection
+    enabled: true
+    description: "目标检测接口"
+
+  - name: whiteback_detection
+    enabled: true
+    description: "处理白底图检测请求"
+
+  # 集成模块（最后加载）
+  - name: integrated
+    enabled: true
+    description: "统一聊天接口"

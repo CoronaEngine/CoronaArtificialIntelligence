@@ -137,7 +137,7 @@ def warmup_http_clients() -> None:
     - _get_music_http_client(): 音乐生成 HTTP 客户端
     """
     try:
-        from ai_models.image_generate.tools.client_image import (
+        from modules.image_generate.tools.client_image import (
             _get_image_http_client,
         )
 
@@ -146,7 +146,7 @@ def warmup_http_clients() -> None:
         logger.debug(f"图像客户端预热跳过: {e}")
 
     try:
-        from ai_models.speech_generate.tools.client_speech import (
+        from modules.speech_generate.tools.client_speech import (
             _get_tts_http_client,
         )
 
@@ -155,7 +155,7 @@ def warmup_http_clients() -> None:
         logger.debug(f"TTS 客户端预热跳过: {e}")
 
     try:
-        from ai_models.music_generate.tools.client_music import (
+        from modules.music_generate.tools.client_music import (
             _get_music_http_client,
         )
 
