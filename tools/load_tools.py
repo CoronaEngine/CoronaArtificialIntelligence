@@ -31,8 +31,8 @@ from typing import List
 
 from langchain_core.tools import BaseTool
 
-from config.ai_config import AIConfig
-from tools.registry import (
+from ..config.ai_config import AIConfig
+from ..tools.registry import (
     ToolRegistry,
     ToolCategory,
     ToolDependency,

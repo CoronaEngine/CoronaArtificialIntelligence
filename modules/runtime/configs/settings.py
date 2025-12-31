@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 
 @ai_entrance.collector.register_setting("runtime")
 def RUNTIME_SETTINGS() -> Dict[str, Any]:

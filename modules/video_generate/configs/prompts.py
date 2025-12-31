@@ -1,5 +1,5 @@
 
-from config.prompts import ToolPromptConfig
+from ....config.prompts import ToolPromptConfig
 # ===========================================================================
 # 视频生成提示词
 # ===========================================================================

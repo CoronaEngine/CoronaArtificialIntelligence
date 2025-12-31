@@ -9,7 +9,7 @@ from ..configs.dataclasses import (
     MusicConfig,
 )
 
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 
 
 @ai_entrance.collector.register_loader('music')

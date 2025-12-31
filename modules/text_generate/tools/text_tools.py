@@ -9,10 +9,10 @@ from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from config.ai_config import AIConfig
-from models import get_chat_model
+from ....config.ai_config import AIConfig
+from ....models import get_chat_model
 from ..configs.prompts import PRODUCT_TEXT_PROMPTS, MARKETING_TEXT_PROMPTS, CREATIVE_TEXT_PROMPTS, PLATFORM_TIPS
-from tools.response_adapter import (
+from ....tools.response_adapter import (
     build_part,
     build_success_result,
     build_error_result,

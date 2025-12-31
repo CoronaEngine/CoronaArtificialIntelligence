@@ -9,7 +9,7 @@ from http import HTTPStatus
 from typing import Dict, Any, Tuple, Optional
 from dashscope import VideoSynthesis
 
-from models.utils import (
+from ....models.utils import (
     retry_operation,
     TaskPoller,
     BaseAPIClient,

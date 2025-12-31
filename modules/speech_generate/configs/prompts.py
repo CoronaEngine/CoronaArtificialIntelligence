@@ -1,5 +1,5 @@
 
-from config.prompts import ToolPromptConfig
+from ....config.prompts import ToolPromptConfig
 # ===========================================================================
 # 语音合成提示词
 # ===========================================================================

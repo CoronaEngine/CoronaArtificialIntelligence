@@ -9,7 +9,7 @@
 
 from __future__ import annotations
 
-from config.prompts import ToolPromptConfig, SceneToolPrompts
+from ....config.prompts import ToolPromptConfig, SceneToolPrompts
 
 # ===========================================================================
 # 场景查询工具提示词

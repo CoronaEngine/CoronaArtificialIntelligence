@@ -10,7 +10,7 @@ from ..configs.prompts import (
     SCENE_QUERY_PROMPTS,
     SCENE_TRANSFORM_PROMPTS,
 )
-from tools.response_adapter import (
+from ....tools.response_adapter import (
     build_part,
     build_success_result,
     build_error_result,

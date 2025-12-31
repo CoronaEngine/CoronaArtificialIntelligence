@@ -8,7 +8,7 @@ import uuid
 from typing import Optional, Dict, Any, Tuple
 import httpx
 
-from models.utils import TaskPoller
+from ....models.utils import TaskPoller
 from ..configs.dataclasses import SpeechAppConfig, SpeechAudioConfig
 
 # 全局共享 HTTP 客户端连接池（线程安全）

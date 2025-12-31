@@ -4,7 +4,7 @@
 
 from typing import Any, Mapping
 from ..configs.dataclasses import NetworkConfig
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 
 @ai_entrance.collector.register_loader('network')
 def _load_network_config(raw: Mapping[str, Any] | None) -> NetworkConfig:

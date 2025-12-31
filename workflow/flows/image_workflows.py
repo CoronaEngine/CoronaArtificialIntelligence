@@ -13,8 +13,8 @@ from typing import Any, Dict, TYPE_CHECKING
 
 from langgraph.graph import StateGraph, START, END
 
-from workflow.state import WorkflowState
-from workflow.nodes import (
+from ..state import WorkflowState
+from ..nodes import (
     make_tool_node,
     make_error_check_node,
 )

@@ -11,10 +11,10 @@ from typing import Any, Dict, List, Optional
 from InnerAgentWorkflow.ai_tools.whiteback_detect_tool import (
     get_whiteback_detect_tool,
 )
-from tools.common import (
+from ...tools.common import (
     build_success_response,
 )
-from service.entrance import register_entrance
+from ...service.entrance import register_entrance
 
 # 日志配置
 logger = logging.getLogger(__name__)

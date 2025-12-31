@@ -4,8 +4,8 @@ from typing import List
 
 from langchain_core.tools import BaseTool
 
-from config.ai_config import AIConfig
-from modules.mcp.tools.scene_tools import load_scene_tools
+from ....config.ai_config import AIConfig
+from ....modules.mcp.tools.scene_tools import load_scene_tools
 
 
 

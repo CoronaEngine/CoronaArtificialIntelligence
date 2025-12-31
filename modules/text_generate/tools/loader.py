@@ -5,8 +5,8 @@ LLM 配置加载器
 from typing import Any, Dict, Mapping
 
 from ..configs.dataclasses import ToolModelConfig, ChatModelConfig
-from tools.helpers import _as_float
-from service.entrance import ai_entrance
+from ....tools.helpers import _as_float
+from ....service.entrance import ai_entrance
 
 @ai_entrance.collector.register_loader('chat')
 def _load_chat_models(raw: Mapping[str, Any]) -> ChatModelConfig:

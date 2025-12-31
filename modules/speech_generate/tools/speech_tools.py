@@ -8,19 +8,19 @@ import logging
 from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 
-from config.ai_config import AIConfig
-from tools.context import get_current_session
+from ....config.ai_config import AIConfig
+from ....tools.context import get_current_session
 from media_resource import (
     get_media_registry,
     get_storage_adapter,
 )
-from tools.response_adapter import (
+from ....tools.response_adapter import (
     build_part,
     build_success_result,
     build_error_result,
 )
 from ..configs.prompts import SPEECH_PROMPTS
-from models.pool import (
+from ....models.pool import (
     get_pool_registry,
     MediaCategory,
     SpeechRequest,

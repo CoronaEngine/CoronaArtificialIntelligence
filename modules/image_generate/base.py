@@ -4,9 +4,9 @@ from __future__ import annotations
 from typing import Any, Dict, List
 import logging
 
-from config.ai_config import get_ai_config
+from ...config.ai_config import get_ai_config
 
-from tools.common import (
+from ...tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
@@ -14,9 +14,9 @@ from tools.common import (
     extract_parameter,
     parse_tool_response,
 )
-from tools.concurrency import session_concurrency
-from service.entrance import register_entrance
-from tools.workflow_executor import (
+from ...tools.concurrency import session_concurrency
+from ...service.entrance import register_entrance
+from ...tools.workflow_executor import (
     extract_function_id,
     execute_workflow,
 )

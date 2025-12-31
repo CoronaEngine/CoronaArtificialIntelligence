@@ -21,7 +21,7 @@ from enum import Enum
 from typing import Any, Callable, Dict, Optional, Union
 
 from config.ai_config import get_ai_config
-from media_resource.result import StorageResult
+from .result import StorageResult
 
 logger = logging.getLogger(__name__)
 

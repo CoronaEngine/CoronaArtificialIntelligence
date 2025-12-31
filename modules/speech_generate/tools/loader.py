@@ -7,7 +7,7 @@ from typing import Any, Mapping
 
 from ..configs.dataclasses import TTSConfig
 
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 
 @ai_entrance.collector.register_loader('tts')
 def _load_tts_config(raw: Mapping[str, Any] | None) -> TTSConfig:

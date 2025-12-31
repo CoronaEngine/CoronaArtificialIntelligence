@@ -12,14 +12,14 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from tools.common import build_error_response
-from workflow.adapter import (
+from ..tools.common import build_error_response
+from ..workflow.adapter import (
     extract_function_id,
     parse_request,
     format_response,
 )
-from workflow.registry import get_workflow_registry
-from tools.context import (
+from ..workflow.registry import get_workflow_registry
+from ..tools.context import (
     set_current_session,
     reset_current_session,
 )

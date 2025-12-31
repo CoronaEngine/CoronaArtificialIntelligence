@@ -6,7 +6,7 @@ from typing import Any, Mapping
 
 from ..configs.dataclasses import SessionConfig
 
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 
 @ai_entrance.collector.register_loader('session')
 def _load_session_config(raw: Mapping[str, Any] | None) -> SessionConfig:

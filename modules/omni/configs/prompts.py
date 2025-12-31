@@ -1,5 +1,5 @@
 
-from config.prompts import ToolPromptConfig
+from ....config.prompts import ToolPromptConfig
 
 
 # ==========================================================================

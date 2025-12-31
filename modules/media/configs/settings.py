@@ -1,7 +1,7 @@
 from ...image_generate.configs.settings import IMAGE_SETTINGS
 from ...omni.configs.settings import OMNI_SETTINGS
 from ...video_generate.configs.settings import VIDEO_SETTINGS
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 from typing import Any, Dict
 
 

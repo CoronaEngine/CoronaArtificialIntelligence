@@ -8,7 +8,7 @@ import logging
 from abc import ABC, abstractmethod
 from typing import Optional
 
-from media_resource.result import StorageResult
+from .result import StorageResult
 
 logger = logging.getLogger(__name__)
 

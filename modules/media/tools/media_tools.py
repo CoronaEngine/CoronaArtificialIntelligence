@@ -1,4 +1,4 @@
-from config.ai import AIConfig
+from ....config.ai import AIConfig
 from ..configs.dataclasses import MediaToolConfig
 
 

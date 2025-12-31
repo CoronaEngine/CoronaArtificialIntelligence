@@ -14,18 +14,18 @@ import logging
 import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from models.pool.category import MediaCategory
-from models.pool.requests import MediaRequest
-from models.pool.responses import (
+from .category import MediaCategory
+from .requests import MediaRequest
+from .responses import (
     MediaResult,
     MultiMediaResult,
     ChatResult,
 )
-from models.pool.legacy_fallback import (
+from .legacy_fallback import (
     create_legacy_task,
     clear_legacy_clients,
 )
-from modules.providers.configs.dataclasses import ProviderConfig
+from ...modules.providers.configs.dataclasses import ProviderConfig
 
 logger = logging.getLogger(__name__)
 

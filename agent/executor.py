@@ -28,9 +28,9 @@ from langchain_core.messages import BaseMessage, SystemMessage
 from langchain.agents import create_agent
 from langchain.agents.middleware import wrap_model_call
 
-from config.ai_config import AIConfig, get_ai_config
-from models.pool import get_chat_model
-from tools.registry import get_tool_registry
+from ..config.ai_config import AIConfig, get_ai_config
+from ..models.pool import get_chat_model
+from ..tools.registry import get_tool_registry
 
 
 logger = logging.getLogger(__name__)

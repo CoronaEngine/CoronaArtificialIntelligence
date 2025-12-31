@@ -6,15 +6,15 @@ from typing import List
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
-from config.ai_config import AIConfig
-from tools.context import get_current_session
-from tools.response_adapter import (
+from ....config.ai_config import AIConfig
+from ....tools.context import get_current_session
+from ....tools.response_adapter import (
     build_part,
     build_success_result,
     build_error_result,
 )
 from ..configs.prompts import OMNI_PROMPTS
-from models.pool import (
+from ....models.pool import (
     get_pool_registry,
     MediaCategory,
     OmniRequest,

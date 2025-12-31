@@ -14,20 +14,20 @@ from pydantic import BaseModel, Field
 
 from config.ai_config import AIConfig
 # MediaToolConfig
-from models.utils import resize_image_with_constraints
-from tools.context import get_current_session
-from media_resource import (
+from ....models.utils import resize_image_with_constraints
+from ....tools.context import get_current_session
+from ....media_resource import (
     get_media_registry,
     get_storage_adapter,
     calculate_expire_time,
 )
-from tools.response_adapter import (
+from ....tools.response_adapter import (
     build_part,
     build_success_result,
     build_error_result,
 )
 from ..configs.prompts import VIDEO_PROMPTS
-from models.pool import (
+from ....models.pool import (
     get_pool_registry,
     MediaCategory,
     VideoRequest,

@@ -17,13 +17,13 @@ from typing import Any, Dict, Optional
 
 import httpx
 
-from media_resource.adapter_base import (
+from .adapter_base import (
     StorageAdapter,
     normalize_to_data_uri,
 )
-from media_resource.cache import get_memory_cache
-from media_resource.config import MEMORY_CACHE_CONFIG
-from media_resource.result import StorageResult
+from .cache import get_memory_cache
+from .config import MEMORY_CACHE_CONFIG
+from .result import StorageResult
 
 logger = logging.getLogger(__name__)
 

@@ -5,8 +5,8 @@ from ...music_generate.configs.prompts import MUSIC_PROMPTS
 from ...omni.configs.prompts import OMNI_PROMPTS
 from ...speech_generate.configs.prompts import SPEECH_PROMPTS
 from ...video_generate.configs.prompts import VIDEO_PROMPTS
-from service.entrance import ai_entrance
-from config.prompts import MediaToolPrompts, DetectionPromptConfig
+from ....service.entrance import ai_entrance
+from ....config.prompts import MediaToolPrompts, DetectionPromptConfig
 
 
 # ===========================================================================

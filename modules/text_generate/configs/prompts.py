@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import Dict
 
-from config.prompts import TextToolPromptConfig, TextToolPrompts
+from ....config.prompts import TextToolPromptConfig, TextToolPrompts
 
 # ===========================================================================
 # 平台文案建议

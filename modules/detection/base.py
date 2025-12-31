@@ -10,16 +10,16 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict, List
 
-from config.ai_config import get_ai_config
-from tools.common import (
+from ...config.ai_config import get_ai_config
+from ...tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
     session_context,
     parse_tool_response,
 )
-from tools.concurrency import session_concurrency
-from service.entrance import register_entrance
+from ...tools.concurrency import session_concurrency
+from ...service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ import os
 from typing import Any, Dict, Mapping
 
 from ..configs.dataclasses import ProviderConfig
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 
 
 @ai_entrance.collector.register_loader('providers')

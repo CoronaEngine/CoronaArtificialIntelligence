@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import httpx
 
 from ...providers.configs.dataclasses import ProviderConfig
-from models.utils import (
+from ....models.utils import (
     BaseAPIClient,
     TaskPoller,
     retry_operation,

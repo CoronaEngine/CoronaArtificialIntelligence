@@ -10,19 +10,19 @@ import logging
 from typing import Any, Dict, List, Optional
 from langchain_core.messages import AIMessage, ToolMessage, BaseMessage, HumanMessage
 
-from agent.executor import (
+from ...agent.executor import (
     fallback_completion,
     stream_agent,
 )
-from agent.interface import process_chat_request
-from config.ai_config import get_ai_config
-from tools.common import (
+from ...agent.interface import process_chat_request
+from ...config.ai_config import get_ai_config
+from ...tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
 )
-from tools.concurrency import session_concurrency
-from service.entrance import register_entrance
+from ...tools.concurrency import session_concurrency
+from ...service.entrance import register_entrance
 
 logger = logging.getLogger(__name__)
 

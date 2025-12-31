@@ -37,14 +37,14 @@
 """
 
 # 类别
-from models.pool.category import (
+from .category import (
     MediaCategory,
     CATEGORY_CONTENT_TYPE,
     get_content_type,
 )
 
 # 请求
-from models.pool.requests import (
+from .requests import (
     MediaRequest,
     ImageRequest,
     VideoRequest,
@@ -56,7 +56,7 @@ from models.pool.requests import (
 )
 
 # 响应
-from models.pool.responses import (
+from .responses import (
     MediaResult,
     MultiMediaResult,
     ChatResult,
@@ -65,7 +65,7 @@ from models.pool.responses import (
 )
 
 # 注册表与初始化
-from models.pool.registry import (
+from .registry import (
     PoolRegistry,
     get_pool_registry,
     reset_pool_registry,
@@ -80,7 +80,7 @@ from models.pool.registry import (
 )
 
 # 降级适配器（内部使用，但导出供测试）
-from models.pool.legacy_fallback import (
+from .legacy_fallback import (
     get_legacy_client,
     clear_legacy_clients,
     create_legacy_task,

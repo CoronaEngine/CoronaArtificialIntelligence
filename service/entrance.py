@@ -3,13 +3,15 @@ import logging
 import os
 
 import importlib
+import sys
 from typing import Callable
 
 import yaml
-
-from tools.ai_config_collector import ConfigCollector
+# sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from ..tools.ai_config_collector import ConfigCollector
 
 logger = logging.getLogger(__name__)
+
 
 class ai_entrance:
     collector = ConfigCollector()
@@ -89,15 +91,15 @@ def register_entrance(handler_name: str = None):
         return wrapper
 
     return decorator
-#
-#
-# print(ai_entrance().handle_image_generation(payload = {
-#         "session_id": "test_session",
-#         "llm_content": [
-#             {
-#                 "role": "user",
-#                 "interface_type": "image",
-#                 "part": [{"content_type": "text", "content_text": "一只可爱的小猫咪"}],
-#             }
-#         ]
-#     }))
+
+
+print(ai_entrance().handle_image_generation(payload = {
+        "session_id": "test_session",
+        "llm_content": [
+            {
+                "role": "user",
+                "interface_type": "image",
+                "part": [{"content_type": "text", "content_text": "一只可爱的小猫咪"}],
+            }
+        ]
+    }))

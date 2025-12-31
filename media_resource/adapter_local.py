@@ -9,11 +9,11 @@ from __future__ import annotations
 import logging
 from typing import Optional
 
-from media_resource.adapter_base import (
+from .adapter_base import (
     StorageAdapter,
     normalize_to_data_uri,
 )
-from media_resource.result import StorageResult
+from .result import StorageResult
 
 logger = logging.getLogger(__name__)
 

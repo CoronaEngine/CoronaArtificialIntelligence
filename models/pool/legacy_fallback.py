@@ -11,8 +11,8 @@ import logging
 import threading
 from typing import Any, Callable, Dict, Optional, Union
 
-from models.pool.category import MediaCategory
-from models.pool.requests import (
+from .category import MediaCategory
+from .requests import (
     MediaRequest,
     ImageRequest,
     VideoRequest,
@@ -22,13 +22,13 @@ from models.pool.requests import (
     OmniRequest,
     DetectionRequest,
 )
-from models.pool.responses import (
+from .responses import (
     MediaResult,
     MultiMediaResult,
     ChatResult,
 )
-from modules.providers.configs.dataclasses import ProviderConfig
-from modules.speech_generate.configs.dataclasses import SpeechAudioConfig, SpeechAppConfig
+from ...modules.providers.configs.dataclasses import ProviderConfig
+from ...modules.speech_generate.configs.dataclasses import SpeechAudioConfig, SpeechAppConfig
 
 logger = logging.getLogger(__name__)
 

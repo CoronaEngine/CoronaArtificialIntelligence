@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Optional, Tuple
 
 import httpx
 
+from ...providers.configs.dataclasses import ProviderConfig
 # from config.ai_config import ProviderConfig
-from models.utils import (
+from ....models.utils import (
     retry_operation,
     BaseAPIClient,
     file_url_to_data_uri,

@@ -7,7 +7,7 @@ from __future__ import annotations
 from typing import Any, Dict, List
 
 # 默认提供商配置
-from service.entrance import ai_entrance
+from ....service.entrance import ai_entrance
 # 网络请求配置
 @ai_entrance.collector.register_setting("providers")
 def PROVIDERS() -> List[Dict[str, Any]]:

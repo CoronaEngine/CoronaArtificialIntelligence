@@ -21,14 +21,14 @@ from __future__ import annotations
 import logging
 from typing import Any, Optional
 
-from workflow.adapter import (
+from .adapter import (
     parse_request,
     format_response,
 )
-from workflow.registry import get_workflow_registry
-from workflow.state import WorkflowState
-from tools.common import build_error_response
-from tools.context import (
+from .registry import get_workflow_registry
+from .state import WorkflowState
+from ..tools.common import build_error_response
+from ..tools.context import (
     set_current_session,
     reset_current_session,
 )

@@ -6,8 +6,8 @@ from contextlib import contextmanager
 from typing import Any, Dict, Iterable, List, Optional
 from collections.abc import Mapping
 
-from agent.conversation import default_session_id
-from tools.context import (
+from ..agent.conversation import default_session_id
+from ..tools.context import (
     reset_current_session,
     set_current_session,
 )

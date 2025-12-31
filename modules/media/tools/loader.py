@@ -12,8 +12,8 @@ from ..configs.dataclasses import (
     DetectionModelConfig,
     MediaConfig,
 )
-from service.entrance import ai_entrance
-from tools.helpers import _as_bool
+from ....service.entrance import ai_entrance
+from ....tools.helpers import _as_bool
 
 @ai_entrance.collector.register_loader('media')
 def _load_media_config(raw: Mapping[str, Any]) -> MediaConfig:
