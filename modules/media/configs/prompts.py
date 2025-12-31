@@ -1,14 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, Dict
-
-
+from ...image_generate.configs.prompts import IMAGE_PROMPTS
+from ...music_generate.configs.prompts import MUSIC_PROMPTS
+from ...omni.configs.prompts import OMNI_PROMPTS
+from ...speech_generate.configs.prompts import SPEECH_PROMPTS
+from ...video_generate.configs.prompts import VIDEO_PROMPTS
+from service.entrance import ai_entrance
 from config.prompts import MediaToolPrompts, DetectionPromptConfig
-from modules.image_generate.configs.settings import IMAGE_SETTINGS, IMAGE_PROMPTS
-from modules.video_generate.configs.settings import VIDEO_SETTINGS, VIDEO_PROMPTS
-from modules.speech_generate.configs.settings import SPEECH_PROMPTS
-from modules.music_generate.configs.settings import MUSIC_PROMPTS
-from modules.omni.configs.settings import OMNI_SETTINGS, OMNI_PROMPTS
+
+
 # ===========================================================================
 # 目标检测默认提示词（占位配置，实际配置在 InnerAgentWorkflow/ai_config/omni/base.py）
 # ===========================================================================
@@ -27,25 +27,8 @@ DETECTION_PROMPTS = DetectionPromptConfig(
     target_prefix="请重点检测图片中的「{target_description}」。\n\n",
 )
 
-# ===========================================================================
-# 整合的媒体配置
-# ===========================================================================
 
 
-from service.entrance import ai_entrance
-
-@ai_entrance.collector.register_setting("media")
-def MEDIA_SETTINGS() -> Dict[str, Any]:
-    return {
-        "audio": {
-            "sample_rate": 24000,
-            "bitrate": 160,
-        },
-        "image": IMAGE_SETTINGS,
-        "video": VIDEO_SETTINGS,
-        "omni": OMNI_SETTINGS,
-        # detection 配置已迁移到 InnerAgentWorkflow/ai_config/omni/base.py
-    }
 
 # ===========================================================================
 # 整合的媒体工具提示词

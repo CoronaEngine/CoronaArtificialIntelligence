@@ -17,61 +17,6 @@ from typing import Any, Dict, Optional
 
 from config.ai import AIConfig
 
-# try:
-# from .ai_settings import AI_SETTINGS, DEFAULT_SYSTEM_PROMPT
-# except ImportError:
-#     AI_SETTINGS = {}
-#     DEFAULT_SYSTEM_PROMPT = ""
-
-# ---------------------------------------------------------------------------
-# 从子模块导入数据类
-# ---------------------------------------------------------------------------
-#
-# from .dataclasses import (
-#     # Provider
-#     ProviderConfig,
-#     # LLM
-#     ChatModelConfig,
-#     ToolModelConfig,
-#     # Media
-#     AudioConfig,
-#     ImageConstraintsConfig,
-#     MediaToolConfig,
-#     OmniModelConfig,
-#     DetectionModelConfig,
-#     MediaConfig,
-#     # Network
-#     NetworkConfig,
-#     PollingConfig,
-#     # Session
-#     SessionConfig,
-#     # Speech
-#     SpeechAppConfig,
-#     SpeechAudioConfig,
-#     SpeechRequestConfig,
-#     # Services
-#     TTSConfig,
-#     MusicConfig,
-#     # AI
-#     AIConfig,
-# )
-
-# ---------------------------------------------------------------------------
-# 从子模块导入加载函数
-# ---------------------------------------------------------------------------
-#
-# from .loaders import (
-#     _as_float,
-#     _load_providers,
-#     _load_tool_models,
-#     _load_media_config,
-#     _load_network_config,
-#     _load_polling_config,
-#     _load_session_config,
-#     _load_tts_config,
-#     _load_music_config,
-# )
-
 # ---------------------------------------------------------------------------
 # 模块级缓存
 # ---------------------------------------------------------------------------
@@ -127,36 +72,6 @@ def _build_ai_config() -> AIConfig:
         raise RuntimeError("AI 配置中至少需要声明一个 provider")
 
     return ai_entrance.collector.AIConfig
-    # llm_section = raw.get("llm", {})
-    # chat_section = raw.get("chat", {})
-    # chat = ChatModelConfig(
-    #     provider=str(chat_section.get("provider", next(iter(providers.keys())))),
-    #     model=str(chat_section.get("model", "Qwen/Qwen2.5-7B-Instruct")),
-    #     temperature=_as_float(chat_section.get("temperature", 0.2), 0.2),
-    #     request_timeout=_as_float(chat_section.get("request_timeout", 60), 60.0),
-    #     system_prompt=str(chat_section.get("system_prompt", "DEFAULT_SYSTEM_PROMPT")),
-    # )
-    #
-    # tool_models = _load_tool_models(raw.get("tool_models", {}))
-    # network = _load_network_config(raw.get("network"))
-    # polling = _load_polling_config(raw.get("polling"))
-    # session = _load_session_config(raw.get("session"))
-    # media = _load_media_config(raw.get("media", {}))
-    # tts = _load_tts_config(raw.get("tts"))
-    # music = _load_music_config(raw.get("music"))
-
-    # return AIConfig(
-    #     providers=providers,
-    #     chat=chat,
-    #     tool_models=tool_models,
-    #     network=network,
-    #     polling=polling,
-    #     session=session,
-    #     media=media,
-    #     tts=tts,
-    #     music=music,
-    # )
-
 
 def get_ai_config() -> AIConfig:
     """获取 AI 配置（单例，线程安全）"""
@@ -180,23 +95,6 @@ def reload_ai_config() -> AIConfig:
 __all__ = [
     # 数据类
     "AIConfig",
-    # "ProviderConfig",
-    # "ChatModelConfig",
-    # "ToolModelConfig",
-    # "MediaConfig",
-    # "MediaToolConfig",
-    # "OmniModelConfig",
-    # "DetectionModelConfig",
-    # "NetworkConfig",
-    # "PollingConfig",
-    # "AudioConfig",
-    # "ImageConstraintsConfig",
-    # "SessionConfig",
-    # "TTSConfig",
-    # "MusicConfig",
-    # "SpeechAppConfig",
-    # "SpeechAudioConfig",
-    # "SpeechRequestConfig",
     # 公共函数
     "get_ai_config",
     "reload_ai_config",
