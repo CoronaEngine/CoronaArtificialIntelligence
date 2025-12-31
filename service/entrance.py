@@ -77,8 +77,6 @@ def register_entrance(handler_name: str = None):
     Args:
         handler_name: 在 ai_entrance 中的方法名，默认使用原函数名
     """
-
-
     def decorator(func: Callable) -> Callable:
         # 确定在 ai_entrance 中的方法名
         method_name = handler_name or func.__name__
@@ -88,43 +86,7 @@ def register_entrance(handler_name: str = None):
             return func(*args, **kwargs)
 
         setattr(ai_entrance, method_name, staticmethod(wrapper))
-
         return wrapper
-
 
     return decorator
 
-
-payload = {
-    "session_id": "test_session",
-    "llm_content": [
-        {
-            "role": "user",
-            "interface_type": "text",
-            "part": [
-                {
-                    "content_type": "text",
-                    "content_text": "产品名：智能降噪耳机 AirPods Pro\n特点：主动降噪、空间音频、通透模式、长续航",
-                }
-            ],
-            "parameter": {
-                "text_type": "product",
-                "style": "专业",
-                "length": "中等",
-            },
-        }
-    ],
-}
-print(ai_entrance().handle_text_generation(payload))
-
-
-# print(ai_entrance().handle_image_generation(payload = {
-#         "session_id": "test_session",
-#         "llm_content": [
-#             {
-#                 "role": "user",
-#                 "interface_type": "image",
-#                 "part": [{"content_type": "text", "content_text": "一只可爱的小猫咪"}],
-#             }
-#         ]
-#     }))
