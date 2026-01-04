@@ -1,0 +1,51 @@
+# ------------------------------
+# Common Python artifacts
+# ------------------------------
+*/__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg-info/
+.eggs/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+*/package-lock.json
+*.toml
+
+# ------------------------------
+# Virtual environments
+# ------------------------------
+.venv/
+venv/
+ENV/
+Env/
+env/
+.python-version
+.tox/
+
+# ------------------------------
+# Logs & temp files
+# ------------------------------
+*.log
+*.tmp
+*.swp
+
+# ------------------------------
+# OS / Editor junk
+# ------------------------------
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.code-workspace
+
+# ------------------------------
+# Docker / Logs
+# ------------------------------
+logs/
+docker.conf
