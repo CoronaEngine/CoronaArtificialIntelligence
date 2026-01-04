@@ -139,7 +139,7 @@ def resolve_parts(
         file_id = content_url[len(FILEID_SCHEME):]
 
         try:
-            result = registry.resolve_with_expire_time(file_id, timeout=timeout, encode_to_base64=encode_to_base64)
+            result = registry.resolve_with_expire_time(file_id, encode_to_base64=encode_to_base64)
             resolved_url = result.get("url", "")
             url_expire_time = result.get("url_expire_time")
             logger.debug(f"解析 file_id {file_id} -> url={resolved_url}, url_expire_time={url_expire_time}")

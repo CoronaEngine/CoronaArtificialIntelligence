@@ -116,7 +116,9 @@ def _build_agent(config: AIConfig) -> Any:
     registry = get_tool_registry()
     if not registry.list_tools():
         # 尚未发现工具，执行发现
-        registry.discover(config)
+        # 使用 load_tools 确保内置加载器被注册
+        from ai_tools import load_tools
+        load_tools(config)
 
     tools = registry.list_tools()
     logger.debug(f"Agent 使用 {len(tools)} 个工具: {[t.name for t in tools]}")

@@ -13,6 +13,7 @@ import logging
 from typing import Any, Dict
 
 from ai_tools.common import build_error_response
+from ai_tools.session_tracking import init_session,update_session_state,set_session_error
 from ai_workflow.adapter import (
     extract_function_id,
     parse_request,
@@ -76,7 +77,39 @@ def execute_workflow(
         token = set_current_session(session_id)
 
         try:
+            # 初始化会话追踪
+            from ai_workflow import get_workflow_metadata
+
+            workflow_meta = get_workflow_metadata(function_id)
+            workflow_name = (
+                workflow_meta.get("name", f"workflow_{function_id}")
+                if workflow_meta
+                else f"workflow_{function_id}"
+            )
+
+            init_session(
+                session_id=session_id,
+                input_type="workflow",
+                parameters={
+                    "function_id": function_id,
+                    "workflow_name": workflow_name,
+                    "prompt": initial_state.get("prompt", ""),
+                    "images": initial_state.get("images", []),
+                    "bounding_box": initial_state.get("bounding_box"),
+                },
+            )
+            update_session_state(session_id, "running")
+
+            # 执行工作流
             final_state = workflow.invoke(initial_state)
+
+            # 检查是否有错误
+            if final_state.get("error"):
+                set_session_error(session_id, final_state["error"])
+                update_session_state(session_id, "failed")
+            else:
+                update_session_state(session_id, "completed")
+
         finally:
             reset_current_session(token)
 
@@ -87,6 +120,8 @@ def execute_workflow(
 
     except Exception as exc:
         logger.error(f"工作流执行异常: {exc}")
+        set_session_error(session_id, str(exc))
+        update_session_state(session_id, "failed")
         return build_error_response(
             interface_type=interface_type,
             session_id=session_id,

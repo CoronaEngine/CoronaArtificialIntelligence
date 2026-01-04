@@ -3,6 +3,8 @@
 
 管理异步任务的提交、执行和结果获取。
 从 MediaResourceRegistry 中剥离，专注于线程池和 Future 管理。
+
+**超时管理**: 支持 DeadlineContext，优先使用 deadline 剩余时间。
 """
 
 from __future__ import annotations
@@ -24,6 +26,57 @@ from ai_config.ai_config import get_ai_config
 from ai_media_resource.result import StorageResult
 
 logger = logging.getLogger(__name__)
+
+
+# 默认等待超时（秒）- 与 DeadlineConfig.DEFAULT 保持一致
+_DEFAULT_WAIT_TIMEOUT = 300.0
+
+
+def _infer_timeout_from_metadata(metadata: Dict[str, Any]) -> float:
+    """
+    根据任务元数据推断合理的超时时间
+
+    从 metadata 中的 resource_type 推断，与 DeadlineConfig 保持一致。
+    """
+    resource_type = metadata.get("resource_type")
+    if not resource_type:
+        return _DEFAULT_WAIT_TIMEOUT
+
+    try:
+        from InnerAgentWorkflow.utils.deadline import DeadlineConfig
+
+        return DeadlineConfig.get(resource_type)
+    except ImportError:
+        # 降级：手动映射
+        mapping = {
+            "image": 900.0,  # 15分钟 ← 与任务执行超时一致
+            "video": 600.0,  # 10分钟
+            "music": 300.0,  # 5分钟
+            "audio": 300.0,
+            "speech": 120.0,  # 2分钟
+            "text": 120.0,
+            "detection": 120.0,
+        }
+        return mapping.get(resource_type.lower(), _DEFAULT_WAIT_TIMEOUT)
+
+
+def _get_deadline_remaining(default: float, reserve: float = 5.0) -> float:
+    """从 DeadlineContext 获取剩余时间"""
+    # ... (移除默认值 150.0，改为必须传入)
+    try:
+        from InnerAgentWorkflow.utils.deadline import (
+            get_remaining,
+            is_in_task_context,
+            warn_nested_call,
+        )
+
+        if is_in_task_context():
+            warn_nested_call("TaskExecutor.wait()")
+        return get_remaining(reserve=reserve, default=default)
+    except ImportError:
+        return default
+    except Exception:
+        return default
 
 
 class TaskStatus(Enum):
@@ -175,32 +228,36 @@ class TaskExecutor:
         logger.debug(f"[{task_id}] 任务已提交")
         return task_id
 
-    def wait(self, task_id: str, timeout: float = 150.0) -> Any:
+    def wait(self, task_id: str, timeout: float | None = None) -> Any:
         """
         等待任务完成并返回结果
 
-        参数:
-        - task_id: 任务 ID
-        - timeout: 超时时间（秒）
-
-        返回:
-        - 任务结果
-
-        异常:
-        - KeyError: task_id 不存在
-        - TimeoutError: 任务超时
-        - RuntimeError: 任务执行失败
+        **超时策略**:
+        1. 优先使用 DeadlineContext 的剩余时间
+        2. 如果指定了 timeout，使用该值
+        3. 否则根据 metadata.resource_type 智能推断
+        4. 最后降级到 _DEFAULT_WAIT_TIMEOUT
         """
         with self._tasks_lock:
             if task_id not in self._tasks:
                 raise KeyError(f"未知的 task_id: {task_id}")
             record = self._tasks[task_id]
 
+        # 智能推断超时
+        if timeout is None:
+            timeout = _infer_timeout_from_metadata(record.metadata)
+
+        # 尝试从 DeadlineContext 获取
+        actual_timeout = _get_deadline_remaining(default=timeout, reserve=5.0)
+
         try:
-            result = record.future.result(timeout=timeout)
+            result = record.future.result(timeout=actual_timeout)
             return result
         except FutureTimeoutError:
-            raise TimeoutError(f"任务 {task_id} 超时（{timeout}秒）") from None
+            resource_type = record.metadata.get("resource_type", "unknown")
+            raise TimeoutError(
+                f"任务 {task_id} ({resource_type}) 超时（{actual_timeout:.1f}秒）"
+            ) from None
         except Exception as e:
             error_msg = record.error or str(e)
             raise RuntimeError(f"任务 {task_id} 失败: {error_msg}") from e
@@ -265,9 +322,7 @@ class TaskExecutor:
     def cleanup_completed(self) -> int:
         """清理所有已完成的任务"""
         with self._tasks_lock:
-            completed = [
-                tid for tid, rec in self._tasks.items() if rec.future.done()
-            ]
+            completed = [tid for tid, rec in self._tasks.items() if rec.future.done()]
             for tid in completed:
                 del self._tasks[tid]
             return len(completed)

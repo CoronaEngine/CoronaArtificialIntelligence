@@ -62,19 +62,11 @@ def load_text_tools(config: AIConfig) -> List[StructuredTool]:
     - 创意文案：故事、剧本、诗歌等
     """
 
-    # 检查是否配置了豆包 provider
-    if "doubao" not in config.providers:
-        print("[警告] 未配置豆包provider，文案生成工具将不可用")
-        return []
-
-    # 使用文案专用 LLM（从 TEXT 池或降级到豆包配置）
-    # 豆包推荐使用 doubao-pro-32k 或 doubao-lite-32k 等模型
+    # 使用 TEXT 池中的 LLM（账号池自动选择最优账号）
     llm = get_chat_model(
-        provider_name="doubao",
-        model_name="doubao-1-5-pro-32k-250115",  # 默认使用pro版本，更好的文案质量
+        category="text",  # 从 TEXT 账号池获取
         temperature=0.8,  # 较高的温度以增加创意性
         request_timeout=60.0,
-        category="text",  # 使用 TEXT 池（文案专用 LLM）
     )
 
     def _process_generation(

@@ -8,6 +8,8 @@
 - 仅在返回客户端 JSON 或调用上游 API 时解析为真实 URL
 - 与 session TTL 对齐，支持自动过期清理
 - 异步任务执行委托给 TaskExecutor
+
+**超时管理**: 支持使用 DeadlineContext 的剩余时间。
 """
 
 from __future__ import annotations
@@ -287,16 +289,16 @@ class MediaResourceRegistry:
     def resolve(
         self,
         file_id: str,
-        timeout: float = 150.0,
         encode_to_base64: bool | None = None,
         return_original_url: bool = False,
     ) -> str:
         """
         获取 file_id 对应的 URL，异步任务会阻塞等待完成
 
+        **超时管理**: 优先使用 DeadlineContext 的剩余时间（如果存在）。
+
         参数:
         - file_id: 资源 ID
-        - timeout: 超时时间（秒）
         - encode_to_base64: 保留参数，暂未使用（base64 转换在上层处理）
         - return_original_url: 是否返回原始云端 URL（而非 base64）
           - False (默认): 返回 base64 data URI（安全，不泄露上游 URL）
@@ -307,7 +309,7 @@ class MediaResourceRegistry:
 
         异常:
         - KeyError: file_id 不存在
-        - TimeoutError: 任务超时
+        - TimeoutError: 任务超时（DeadlineExceeded 或等待超时）
         - RuntimeError: 任务执行失败
         """
         with self._records_lock:
@@ -330,7 +332,8 @@ class MediaResourceRegistry:
         if record.task_id:
             executor = get_task_executor()
             try:
-                result = executor.wait(record.task_id, timeout=timeout)
+                # 不传递 timeout，让 executor.wait() 根据任务类型智能推断
+                result = executor.wait(record.task_id)
                 # 从结果中提取 URL
                 if isinstance(result, StorageResult):
                     url = result.url
@@ -355,21 +358,22 @@ class MediaResourceRegistry:
     def resolve_with_expire_time(
         self,
         file_id: str,
-        timeout: float = 150.0,
         encode_to_base64: bool | None = None,
     ) -> Dict[str, Any]:
         """
         获取 file_id 对应的 URL 和过期时间
 
+        **超时管理**: 使用 DeadlineContext 的剩余时间（如果存在），
+        否则使用默认超时。
+
         参数:
         - file_id: 资源 ID
-        - timeout: 超时时间（秒）
         - encode_to_base64: 保留参数，暂未使用（base64 转换在上层处理）
 
         返回:
         - {"url": "...", "url_expire_time": 秒级时间戳或 None}
         """
-        url = self.resolve(file_id, timeout=timeout, encode_to_base64=encode_to_base64)
+        url = self.resolve(file_id, encode_to_base64=encode_to_base64)
 
         with self._records_lock:
             record = self._records.get(file_id)

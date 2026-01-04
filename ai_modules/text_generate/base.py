@@ -6,6 +6,7 @@ import logging
 
 from ai_agent.conversation import default_session_id
 from ai_config.ai_config import get_ai_config
+from ai_modules.media.tools.base import extract_prompt_from_llm_content
 
 from ai_tools.common import (
     ensure_dict,
@@ -33,17 +34,8 @@ def _extract_instruction(parts: List[Dict[str, Any]]) -> str:
     return result
 
 
-def _extract_prompt_from_llm_content(data: Dict[str, Any]) -> str:
-    llm_content = data.get("llm_content")
-    if not isinstance(llm_content, list) or not llm_content:
-        return ""
-    first = llm_content[0]
-    parts = first.get("part", [])
-    prompt = "\n".join(
-        p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-    ).strip()
-    logger.debug(f"提取到 prompt: {prompt}")
-    return prompt
+# 使用基类提供的 extract_prompt_from_llm_content
+
 
 @register_entrance(handler_name="handle_text_generation")
 def handle_text_generation(payload: Any) -> str:
@@ -78,7 +70,7 @@ def _handle_text_generation_inner(
         if text_type not in ["product", "marketing", "creative"]:
             raise ValueError(f"不支持的文案类型: {text_type}")
 
-        from .tools.text_tools import load_text_tools
+        from ai_modules.text_generate.tools.text_tools import load_text_tools
 
         tools = load_text_tools(cfg)
         if not tools:
@@ -90,7 +82,7 @@ def _handle_text_generation_inner(
         }
         text_tool = pick_tool(tools, tool_map[text_type])
 
-        instruction = _extract_prompt_from_llm_content(request_data)
+        instruction = extract_prompt_from_llm_content(request_data)
         if not instruction and "message" in request_data:
             instruction = request_data["message"]
 

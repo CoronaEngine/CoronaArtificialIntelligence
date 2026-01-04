@@ -4,191 +4,194 @@
 处理白底图检测请求，调用远程 API 进行检测并返回标准格式的响应
 """
 
-import json
-import logging
-from typing import Any, Dict, List, Optional
+from __future__ import annotations
 
-from ai_tools.whiteback_detect_tool import (
-    get_whiteback_detect_tool,
-)
+import logging
+from typing import Any, Dict, List
+
+from ai_config.ai_config import get_ai_config
 from ai_tools.common import (
+    ensure_dict,
+    build_error_response,
     build_success_response,
+    parse_tool_response,
+    session_context
 )
-from ai_service.entrance import register_entrance
+from ai_tools.concurrency import session_concurrency
 
 # 日志配置
 logger = logging.getLogger(__name__)
 
+from ai_service.entrance import register_entrance
 
 @register_entrance(handler_name="handle_whiteback_detection")
-def handle_whiteback_detection(request_data: Dict[str, Any]) -> str:
+def handle_whiteback_detection(payload: Any) -> str:
     """
-    处理白底图检测请求
+    白底图检测接口，返回标准三层结构。
 
-    Args:
-        request_data: 请求数据，格式为标准 JSON API 格式:
-        {
-            "session_id": str,  # 会话 ID（必需）
-            "llm_content": [    # 内容数组（必需）
-                {
-                    "content_type": "image",  # 待检测的图片
-                    "content_url": str,       # 图片 URL
-                    ...
-                }
-            ],
-            "metadata": dict    # 可选的元数据
-        }
+    输入格式 (llm_content):
+    - part[].content_type: "image" - 待检测的图片
+    - part[].content_url: 图片 URL
 
-    Returns:
-        JSON 字符串，格式为:
-        {
-            "session_id": str,
-            "error_code": int,      # 0: 成功, 非0: 失败
-            "status_info": str,     # 状态信息
-            "llm_content": [        # 检测结果数组
-                {
-                    "content_type": "whiteback_detect",
-                    "content_text": str,    # 检测结果描述
-                    "content_url": str,     # 原始图片 URL
-                    "parameter": {
-                        "is_whiteback": bool,    # 是否为白底图
-                        "confidence": float,     # 置信度 (0-1)
-                    }
-                }
-            ],
-            "metadata": dict
-        }
+    输出格式 (llm_content):
+    - part[].content_type: "whiteback_detect"
+    - part[].content_text: 检测结果描述（"True" 或 "False"）
+    - part[].content_url: 原始图片 URL
+    - part[].parameter.white_base_value: 白底值（0 || 1）
     """
-    session_id = request_data.get("session_id", "unknown")
-    llm_content_input = request_data.get("llm_content", [])
+    request_data: Dict[str, Any] = ensure_dict(payload)
+    session_id = request_data.get("session_id") or "default"
     metadata = request_data.get("metadata", {})
+    cfg = get_ai_config()
 
-    logger.info(
-        f"[WhitebackDetection] 收到请求 | "
-        f"session_id: {session_id} | "
-        f"llm_content 长度: {len(llm_content_input)}"
-    )
-
-    try:
-        # 验证输入
-        if not llm_content_input:
-            error_msg = "llm_content 为空，无法进行检测"
-            logger.error(f"[WhitebackDetection] {error_msg} | session_id: {session_id}")
-            return _build_error_response(
+    # 使用统一的并发控制
+    with session_concurrency(session_id, cfg) as acquired:
+        if not acquired:
+            return build_error_response(
+                interface_type="whiteback_detection",
                 session_id=session_id,
-                error_code=400,
-                error_msg=error_msg,
                 metadata=metadata,
+                exc=RuntimeError("并发繁忙，请稍后重试"),
             )
-
-        # 提取图片 URL
-        image_urls = _extract_image_urls(llm_content_input)
-        if not image_urls:
-            error_msg = "llm_content 中未找到图片 URL"
-            logger.error(f"[WhitebackDetection] {error_msg} | session_id: {session_id}")
-            return _build_error_response(
-                session_id=session_id,
-                error_code=400,
-                error_msg=error_msg,
-                metadata=metadata,
-            )
-
-        # 获取白底图检测工具
-        detect_tool = get_whiteback_detect_tool()
-
-        # 对每张图片进行检测
-        llm_content_output = []
-        for image_url in image_urls:
-            try:
-                logger.info(
-                    f"[WhitebackDetection] 检测图片 | "
-                    f"session_id: {session_id} | "
-                    f"image_url: {image_url}"
-                )
-
-                # 调用检测工具（返回 ToolResult）
-                detection_result = detect_tool.detect(
-                    image_url=image_url,
-                    session_id=session_id,
-                    metadata=metadata,
-                )
-
-                # 直接使用工具返回的 parts（工具层已输出最终格式）
-                if detection_result.parts:
-                    llm_content_output.extend(detection_result.parts)
-
-                    # 日志记录
-                    part = detection_result.parts[0]
-                    logger.info(
-                        f"[WhitebackDetection] 检测完成 | "
-                        f"session_id: {session_id} | "
-                        f"content_text: {part.get('content_text')} | "
-                        f"white_base_value: {part.get('parameter', {}).get('white_base_value')}"
-                    )
-
-            except Exception as e:
-                logger.exception(
-                    f"[WhitebackDetection] 检测单张图片失败 | "
-                    f"session_id: {session_id} | "
-                    f"image_url: {image_url} | "
-                    f"错误: {e}"
-                )
-
-                # 添加失败结果
-                output_item = {
-                    "content_type": "whiteback_detect",
-                    "content_text": "False",
-                    "content_url": image_url,
-                    "parameter": {
-                        "white_base_value": 0.0,
-                        "error": str(e),
-                    },
-                }
-                llm_content_output.append(output_item)
-
-        logger.info(
-            f"[WhitebackDetection] 请求处理完成 | "
-            f"session_id: {session_id} | "
-            f"检测图片数: {len(llm_content_output)}"
+        return _handle_whiteback_detection_inner(
+            request_data, session_id, metadata, cfg
         )
 
-        # 使用统一的响应构建函数（通过 llm_content 参数避免重复解析）
+
+def _handle_whiteback_detection_inner(
+    request_data: Dict[str, Any],
+    session_id: str,
+    metadata: Dict[str, Any],
+    cfg,
+) -> str:
+    """白底图检测内部实现（在并发控制内执行）"""
+    try:
+        logger.debug(f"收到白底图检测请求: {request_data}")
+
+        # 提取图片 URL 列表
+        image_urls = _extract_image_urls(request_data.get("llm_content", []))
+        if not image_urls:
+            raise ValueError(
+                "缺少待检测的图片，请在 llm_content 中提供 content_type 为 'image' 的图片 URL"
+            )
+
+        # 加载白底图检测工具
+        from tools.whiteback_detect_tool import (
+            load_whiteback_detect_tools,
+        )
+
+        tools = load_whiteback_detect_tools(cfg)
+        if not tools:
+            raise RuntimeError("白底图检测功能未启用或配置不完整")
+
+        detect_tool = tools[0]
+
+        # 对每张图片进行检测
+        all_parts: List[Dict[str, Any]] = []
+
+        with session_context(session_id) as sid:
+            logger.debug(f"进入 session_context: {sid}")
+
+            for image_url in image_urls:
+                try:
+                    logger.info(f"检测图片: {image_url}")
+
+                    # 调用检测工具
+                    result_json = detect_tool.func(image_url=image_url)
+                    logger.debug(f"detect_tool 返回: {result_json}")
+
+                    # 解析 Tool 返回的 Envelope JSON
+                    tool_envelope = parse_tool_response(result_json)
+                    logger.debug(f"解析 tool_envelope: {tool_envelope}")
+
+                    # 检查错误
+                    if tool_envelope.get("error_code", 0) != 0:
+                        error_msg = tool_envelope.get("status_info", "未知错误")
+                        logger.error(f"检测图片 {image_url} 失败: {error_msg}")
+
+                        # 添加失败结果
+                        all_parts.append(
+                            {
+                                "content_type": "whiteback_detect",
+                                "content_text": "False",
+                                "content_url": image_url,
+                                "parameter": {
+                                    "white_base_value": 0,
+                                    "error": error_msg,
+                                },
+                            }
+                        )
+                        continue
+
+                    # 提取 llm_content 中的 parts
+                    llm_content = tool_envelope.get("llm_content", [])
+                    if llm_content:
+                        parts = llm_content[0].get("part", [])
+                        all_parts.extend(parts)
+
+                        # 日志记录
+                        if parts:
+                            part = parts[0]
+                            logger.info(
+                                f"检测完成: {part.get('content_text')}, "
+                                f"white_base_value: {part.get('parameter', {}).get('white_base_value')}"
+                            )
+                    else:
+                        logger.error(f"检测图片 {image_url} 未返回有效内容")
+                        all_parts.append(
+                            {
+                                "content_type": "whiteback_detect",
+                                "content_text": "False",
+                                "content_url": image_url,
+                                "parameter": {
+                                    "white_base_value": 0,
+                                    "error": "未返回有效内容",
+                                },
+                            }
+                        )
+
+                except Exception as e:
+                    logger.exception(f"检测图片 {image_url} 异常: {e}")
+                    all_parts.append(
+                        {
+                            "content_type": "whiteback_detect",
+                            "content_text": "False",
+                            "content_url": image_url,
+                            "parameter": {
+                                "white_base_value": 0,
+                                "error": str(e),
+                            },
+                        }
+                    )
+
+            session_id = sid
+
+        logger.info(f"检测完成，共检测 {len(all_parts)} 张图片")
+
         return build_success_response(
             interface_type="whiteback_detection",
             session_id=session_id,
-            parts=None,  # 不使用 parts
             metadata=metadata,
-            llm_content=[
-                {
-                    "role": "assistant",
-                    "interface_type": "whiteback_detection",
-                    "sent_time_stamp": int(__import__("time").time()),
-                    "part": llm_content_output,
-                }
-            ],
+            parts=all_parts,
         )
 
-    except Exception as e:
-        logger.exception(
-            f"[WhitebackDetection] 请求处理失败 | "
-            f"session_id: {session_id} | "
-            f"错误: {e}"
-        )
-        return _build_error_response(
+    except Exception as exc:
+        logger.error(f"白底图检测异常: {exc}")
+        return build_error_response(
+            interface_type="whiteback_detection",
             session_id=session_id,
-            error_code=500,
-            error_msg=f"服务器内部错误: {str(e)}",
             metadata=metadata,
+            exc=exc,
         )
 
 
 def _extract_image_urls(llm_content: List[Dict[str, Any]]) -> List[str]:
     """
-    从 llm_content 中提取图片 URL
+    从 llm_content 中提取图片 URL。
 
     支持两种格式：
-    1. 扁平格式：llm_content[].content_url
-    2. 嵌套格式：llm_content[].part[].content_url (BackGroundAlpha 格式)
+    1. 嵌套格式（优先）：llm_content[].part[].content_url
+    2. 扁平格式：llm_content[].content_url
 
     Args:
         llm_content: llm_content 数组
@@ -217,33 +220,3 @@ def _extract_image_urls(llm_content: List[Dict[str, Any]]) -> List[str]:
                 image_urls.append(content_url)
 
     return image_urls
-
-
-def _build_error_response(
-    session_id: str,
-    error_code: int,
-    error_msg: str,
-    metadata: Optional[Dict[str, Any]] = None,
-) -> str:
-    """
-    构建错误响应
-
-    Args:
-        session_id: 会话 ID
-        error_code: 错误码
-        error_msg: 错误信息
-        metadata: 可选的元数据
-
-    Returns:
-        JSON 字符串格式的错误响应
-    """
-    response = {
-        "session_id": session_id,
-        "error_code": error_code,
-        "status_info": error_msg,
-        "llm_content": [],
-        "metadata": metadata or {},
-    }
-
-    return json.dumps(response, ensure_ascii=False)
-

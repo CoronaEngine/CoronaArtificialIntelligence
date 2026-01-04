@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 import logging
 
 from ai_config.ai_config import get_ai_config
+from ai_modules.media.tools.base import extract_prompt_from_llm_content, extract_images_from_request
 
 from ai_tools.common import (
     ensure_dict,
@@ -38,42 +39,9 @@ def _normalize_image_size(value: str | None) -> str | None:
     return v
 
 
-def _extract_prompt_from_llm_content(data: Dict[str, Any]) -> str:
-    llm_content = data.get("llm_content")
-    if not isinstance(llm_content, list) or not llm_content:
-        return ""
-    first = llm_content[0]
-    parts = first.get("part", [])
-    prompt = "".join(
-        p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-    ).strip()
-    logger.debug(f"提取到 prompt: {prompt}")
-    return prompt
+# 使用基类提供的 extract_prompt_from_llm_content 和 extract_images_from_request
 
 
-def _extract_images(request_data: Dict[str, Any]) -> List[str]:
-    """从 llm_content 中提取图片 URL 列表。
-
-    规则：
-    1. 遍历 llm_content[0]["part"] 中的所有 image 类型 part。
-    2. 按顺序收集所有图片 URL，图片用途由生成模型自行理解。
-    """
-    llm_content = request_data.get("llm_content", [])
-    if not isinstance(llm_content, list) or not llm_content:
-        return []
-
-    parts = llm_content[0].get("part", [])
-    image_urls: List[str] = []
-
-    for part in parts:
-        if part.get("content_type") != "image" and part.get("content_type") != "detection":
-            continue
-        url = part.get("content_url")
-        if url:
-            image_urls.append(url)
-
-    logger.debug(f"提取到图片 URL 列表: {image_urls}")
-    return image_urls
 
 @register_entrance(handler_name="handle_image_generation")
 def handle_image_generation(payload: Any) -> str:
@@ -121,7 +89,7 @@ def _handle_image_generation_inner(
     """图像生成内部实现（在并发控制内执行）"""
     try:
         logger.debug(f"收到图像生成请求: {request_data}")
-        prompt = _extract_prompt_from_llm_content(request_data)
+        prompt = extract_prompt_from_llm_content(request_data)
         if not prompt:
             raise ValueError("缺少图像生成的 prompt")
 
@@ -136,7 +104,7 @@ def _handle_image_generation_inner(
         image_tool = tools[0]
 
         # 提取图片 URL 列表
-        image_urls = _extract_images(request_data)
+        image_urls = extract_images_from_request(request_data)
         logger.debug(f"提取到图片 URL 列表: {image_urls}")
 
         # 提取 resolution 参数（图片比例）

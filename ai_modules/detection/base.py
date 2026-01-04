@@ -15,11 +15,12 @@ from ai_tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
-    session_context,
     parse_tool_response,
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
+from ai_tools.context import set_current_session, reset_current_session
+from ai_tools.session_tracking import init_session, update_session_state
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +111,20 @@ def _handle_detection_inner(
     cfg,
 ) -> str:
     """目标检测内部实现（在并发控制内执行）"""
+    # 设置会话上下文（用于工具获取当前会话）
+    token = set_current_session(session_id)
+
     try:
+        # 初始化会话追踪（确保账户使用记录可以正常工作）
+        init_session(
+            session_id=session_id,
+            input_type="detection",
+            parameters={
+                "metadata": metadata,
+            },
+        )
+        update_session_state(session_id, "running")
+
         logger.debug(f"收到目标检测请求: {request_data}")
 
         # 提取图片 URL
@@ -133,13 +147,11 @@ def _handle_detection_inner(
         detection_tool = tools[0]
 
         # 调用检测工具
-        with session_context(session_id) as sid:
-            logger.debug(f"进入 session_context: {sid}")
-            result_json = detection_tool.func(
-                image_url=image_url,
-                target_description=target_description,
-            )
-            session_id = sid
+        logger.debug(f"进入 session_context: {session_id}")
+        result_json = detection_tool.func(
+            image_url=image_url,
+            target_description=target_description,
+        )
         logger.debug(f"detection_tool 返回: {result_json}")
 
         # 解析 Tool 返回的 Envelope JSON
@@ -163,6 +175,9 @@ def _handle_detection_inner(
         cleaned_parts = _clean_detection_parts(original_parts)
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
+        # 更新会话状态为完成
+        update_session_state(session_id, "completed")
+
         return build_success_response(
             interface_type="detection",
             session_id=session_id,
@@ -172,12 +187,17 @@ def _handle_detection_inner(
 
     except Exception as exc:
         logger.error(f"目标检测异常: {exc}")
+        # 更新会话状态为失败
+        update_session_state(session_id, "failed")
         return build_error_response(
             interface_type="detection",
             session_id=session_id,
             metadata=metadata,
             exc=exc,
         )
+    finally:
+        # 重置会话上下文
+        reset_current_session(token)
 
 
 def _clean_detection_parts(original_parts: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
