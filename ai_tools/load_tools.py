@@ -93,8 +93,8 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
     # -----------------------------------------------------------------------
     # 场景操作工具（MCP）
     # -----------------------------------------------------------------------
-    from ai_modules.mcp import load_mcp_tools
 
+    from ai_modules.mcp.tools.registry import load_mcp_tools
     registry.register_loader(
         loader=load_mcp_tools,
         category=ToolCategory.SCENE,

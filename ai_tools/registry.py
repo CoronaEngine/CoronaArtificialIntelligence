@@ -480,7 +480,7 @@ class ToolRegistry:
 
         try:
             # 尝试导入外部工具模块
-            external_module = importlib.import_module("ai_tools")
+            external_module = importlib.import_module("tools")
 
             # 查找 load_external_tools 函数
             load_fn = getattr(external_module, "load_external_tools", None)
@@ -514,7 +514,7 @@ class ToolRegistry:
                         tool,
                         category=ToolCategory.EXTERNAL,
                         dependencies=deps,
-                        source="ai_tools",
+                        source="tools",
                         tags=tags,
                         overwrite=True,
                     )

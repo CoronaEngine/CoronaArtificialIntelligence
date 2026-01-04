@@ -52,7 +52,7 @@ def warmup_configs() -> None:
         logger.debug(f"AI 配置预热跳过: {e}")
 
     try:
-        from ai_config.app_config import get_app_config
+        from config.app_config import get_app_config
 
         get_app_config()
     except Exception as e:
