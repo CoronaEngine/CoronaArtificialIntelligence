@@ -52,7 +52,6 @@ class ai_entrance:
                     # 尝试导入 base.py
                     base_path = os.path.join(module_dir, "base.py")
                     if os.path.exists(base_path):
-                        print(base_path)
                         try:
                             module_path = f"ai_modules.{module_name}.base"
                             importlib.import_module(module_path)
