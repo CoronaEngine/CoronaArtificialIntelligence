@@ -94,3 +94,4 @@ def register_entrance(handler_name: str = None):
 
     return decorator
 
+base_ai_entry = ai_entrance()
