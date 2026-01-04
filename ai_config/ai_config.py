@@ -80,7 +80,7 @@ def get_ai_config() -> AIConfig:
         with _AI_CONFIG_LOCK:
             if _AI_CACHE is None:
                 _AI_CACHE = _build_ai_config()
-    print(_AI_CACHE)
+    # print(_AI_CACHE)
     return _AI_CACHE
 
 
