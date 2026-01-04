@@ -50,7 +50,7 @@ def _load_ai_config_data() -> Dict[str, Any]:
     """从 ai_settings 模块加载配置"""
     from ai_service.entrance import ai_entrance
     data = copy.deepcopy(ai_entrance.collector.AI_SETTINGS)
-    print(data)
+    # print(data)
     # data = copy.deepcopy(AI_SETTINGS)
     _apply_env_overrides(data)
     return data

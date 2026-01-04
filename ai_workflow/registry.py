@@ -149,7 +149,7 @@ class WorkflowRegistry:
             return 0
 
         # 扫描 flows 目录下的模块
-        package_name = "workflow.flows"
+        package_name = "ai_workflow.flows"
 
         for module_info in pkgutil.iter_modules([str(flows_path)]):
             if module_info.name.startswith("_"):
