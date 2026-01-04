@@ -43,8 +43,6 @@ class ai_entrance:
         module_name = config.get('name', '')
         module_dir = os.path.join(self.modules_path , module_name)
 
-        print(module_dir)
-
         # 尝试导入 configs/settings.py
         settings_path = os.path.join(module_dir , "configs" , "settings.py")
         if os.path.exists(settings_path):
