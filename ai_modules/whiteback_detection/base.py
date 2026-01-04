@@ -8,7 +8,7 @@ import json
 import logging
 from typing import Any, Dict, List, Optional
 
-from InnerAgentWorkflow.ai_tools.whiteback_detect_tool import (
+from ai_tools.whiteback_detect_tool import (
     get_whiteback_detect_tool,
 )
 from ai_tools.common import (

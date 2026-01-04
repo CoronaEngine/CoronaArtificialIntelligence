@@ -205,13 +205,13 @@ class WorkflowRegistry:
 
         try:
             # 尝试导入外部工作流模块
-            external_module = importlib.import_module("InnerAgentWorkflow.ai_workflows")
+            external_module = importlib.import_module("ai_workflows")
 
             # 查找 load_external_workflows 函数
             load_fn = getattr(external_module, "load_external_workflows", None)
             if load_fn is None:
                 logger.debug(
-                    "No load_external_workflows found in InnerAgentWorkflow.ai_workflows"
+                    "No load_external_workflows found in ai_workflows"
                 )
                 return 0
 
@@ -244,7 +244,7 @@ class WorkflowRegistry:
                 logger.debug(f"Loaded {count} external workflow(s)")
 
         except ImportError:
-            logger.debug("InnerAgentWorkflow.ai_workflows not available")
+            logger.debug("ai_workflows not available")
         except Exception as e:
             logger.error(f"Failed to load external workflows: {e}")
 

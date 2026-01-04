@@ -27,12 +27,12 @@ def _try_import_oss_adapter():
     """
     尝试导入 OSS 存储适配器
 
-    OSS 适配器位于私密仓库 InnerAgentWorkflow.oss_storage 中，
+    OSS 适配器位于私密仓库 oss_storage 中，
     如果导入失败则返回 None。
 
     检测顺序：
     1. 检查 alibabacloud_oss_v2 SDK 是否安装
-    2. 检查 InnerAgentWorkflow.oss_storage 模块是否存在
+    2. 检查 oss_storage 模块是否存在
     """
     # Step 1: 检查 OSS SDK
     try:
@@ -51,9 +51,9 @@ def _try_import_oss_adapter():
 
     # Step 2: 检查 OSS 存储组件
     try:
-        from InnerAgentWorkflow.oss_storage import OSSStorageAdapter
+        from oss_storage import OSSStorageAdapter
 
-        logger.info("✓ OSS 存储组件已安装 (InnerAgentWorkflow.oss_storage)")
+        logger.info("✓ OSS 存储组件已安装 (oss_storage)")
         return OSSStorageAdapter
     except ImportError as e:
         logger.warning(

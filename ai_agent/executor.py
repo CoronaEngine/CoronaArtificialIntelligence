@@ -13,7 +13,7 @@ Agent 执行模块
 
 LLM 获取：
 - 使用 pool.get_chat_model() 统一入口
-- 池模式：从 InnerAgentWorkflow.ai_pool 的 CHAT 池中获取
+- 池模式：从 ai_pool 的 CHAT 池中获取
 - 降级模式：使用 AIConfig 配置的单例客户端
 """
 

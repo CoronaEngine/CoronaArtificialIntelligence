@@ -480,12 +480,12 @@ class ToolRegistry:
 
         try:
             # 尝试导入外部工具模块
-            external_module = importlib.import_module("InnerAgentWorkflow.ai_tools")
+            external_module = importlib.import_module("ai_tools")
 
             # 查找 load_external_tools 函数
             load_fn = getattr(external_module, "load_external_tools", None)
             if load_fn is None:
-                logger.debug("No load_external_tools found in InnerAgentWorkflow.ai_tools")
+                logger.debug("No load_external_tools found in ai_tools")
                 return 0
 
             # 加载工具（这会触发 _init_tool_metadata）
@@ -514,7 +514,7 @@ class ToolRegistry:
                         tool,
                         category=ToolCategory.EXTERNAL,
                         dependencies=deps,
-                        source="InnerAgentWorkflow.ai_tools",
+                        source="ai_tools",
                         tags=tags,
                         overwrite=True,
                     )
@@ -525,7 +525,7 @@ class ToolRegistry:
                     pass
 
         except ImportError:
-            logger.debug("InnerAgentWorkflow.ai_tools not available")
+            logger.debug("ai_tools not available")
         except Exception as e:
             logger.error(f"Failed to load external tools: {e}")
 

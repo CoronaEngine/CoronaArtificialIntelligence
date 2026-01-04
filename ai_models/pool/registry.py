@@ -2,7 +2,7 @@
 智能池注册表
 
 提供统一的接口，自动检测账号池模块是否可用：
-- 可用时：委托给 InnerAgentWorkflow.ai_pool 的真实池
+- 可用时：委托给 ai_pool 的真实池
 - 不可用时：降级到旧客户端单例模式
 
 这是工具层访问池系统的唯一入口。
@@ -39,7 +39,7 @@ _pool_check_lock = threading.Lock()
 
 def _check_pool_available() -> bool:
     """
-    检测 InnerAgentWorkflow.ai_pool 模块是否可用
+    检测 ai_pool 模块是否可用
 
     仅检测一次并缓存结果。
     """
@@ -53,13 +53,13 @@ def _check_pool_available() -> bool:
             return _pool_available
 
         try:
-            import InnerAgentWorkflow.ai_pool  # noqa: F401
+            import ai_pool  # noqa: F401
             _pool_available = True
-            logger.info("检测到 InnerAgentWorkflow.ai_pool 模块，使用账号池系统")
+            logger.info("检测到 ai_pool 模块，使用账号池系统")
         except ImportError:
             _pool_available = False
             logger.info(
-                "未检测到 InnerAgentWorkflow.ai_pool 模块，使用旧客户端降级模式"
+                "未检测到 ai_pool 模块，使用旧客户端降级模式"
             )
 
         return _pool_available
@@ -105,7 +105,7 @@ def _ensure_pool_initialized() -> bool:
             return True
 
         try:
-            from InnerAgentWorkflow.ai_pool import (
+            from ai_pool import (
                 initialize_account_pools,
                 is_pool_initialized,
             )
@@ -159,7 +159,7 @@ class PoolRegistry:
     代理池注册表
 
     自动检测并委托给真实池或降级到旧客户端。
-    提供与 InnerAgentWorkflow.ai_pool.PoolRegistry 兼容的接口。
+    提供与 ai_pool.PoolRegistry 兼容的接口。
     """
 
     _instance: Optional["PoolRegistry"] = None
@@ -188,7 +188,7 @@ class PoolRegistry:
             return None
 
         try:
-            from InnerAgentWorkflow.ai_pool import get_pool_registry
+            from ai_pool import get_pool_registry
 
             # 确保账号池已初始化
             _ensure_pool_initialized()
@@ -208,7 +208,7 @@ class PoolRegistry:
             return category
 
         try:
-            from InnerAgentWorkflow.ai_pool import MediaCategory as InnerCategory
+            from ai_pool import MediaCategory as InnerCategory
 
             return InnerCategory(category.value)
         except Exception:
@@ -274,7 +274,7 @@ class PoolRegistry:
             return request
 
         try:
-            from InnerAgentWorkflow.ai_pool import (
+            from ai_pool import (
                 ImageRequest as InnerImageRequest,
                 VideoRequest as InnerVideoRequest,
                 SpeechRequest as InnerSpeechRequest,
@@ -454,7 +454,7 @@ def initialize_account_pools(
 
     if _check_pool_available():
         try:
-            from InnerAgentWorkflow.ai_pool import (
+            from ai_pool import (
                 initialize_account_pools as real_init,
             )
 
@@ -475,7 +475,7 @@ def is_pool_initialized() -> bool:
     """检查池是否已初始化"""
     if _check_pool_available():
         try:
-            from InnerAgentWorkflow.ai_pool import is_pool_initialized as real_check
+            from ai_pool import is_pool_initialized as real_check
 
             return real_check()
         except Exception:
@@ -491,7 +491,7 @@ def reset_pool_initialization() -> None:
 
     if _check_pool_available():
         try:
-            from InnerAgentWorkflow.ai_pool import (
+            from ai_pool import (
                 reset_pool_initialization as real_reset,
             )
 
@@ -517,7 +517,7 @@ def get_chat_model(
     获取 LLM 客户端（统一入口）
 
     此函数是 Agent 和工具获取 LLM 的首选方式，自动检测并选择：
-    - 池模式：从 InnerAgentWorkflow.ai_pool 的对应池中获取账号并构建 LLM
+    - 池模式：从 ai_pool 的对应池中获取账号并构建 LLM
     - 降级模式：使用 AIConfig 配置的单例客户端
 
     参数:
@@ -551,7 +551,7 @@ def get_chat_model(
     # 池模式：尝试从对应池获取
     if _check_pool_available():
         try:
-            from InnerAgentWorkflow.ai_pool import (
+            from ai_pool import (
                 get_pool_registry as get_real_registry,
                 MediaCategory as InnerCategory,
             )

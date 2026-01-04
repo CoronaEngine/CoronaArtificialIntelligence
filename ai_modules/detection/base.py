@@ -122,7 +122,7 @@ def _handle_detection_inner(
         target_description = _extract_target_description_from_llm_content(request_data)
 
         # 加载检测工具（从外部模块）
-        from InnerAgentWorkflow.ai_tools.detection_tools import (
+        from ai_tools.detection_tools import (
             load_detection_tools,
         )
 
