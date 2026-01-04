@@ -96,14 +96,3 @@ def register_entrance(handler_name: str = None):
 
     return decorator
 
-
-print(ai_entrance().handle_image_generation(payload = {
-        "session_id": "test_session",
-        "llm_content": [
-            {
-                "role": "user",
-                "interface_type": "image",
-                "part": [{"content_type": "text", "content_text": "一只可爱的小猫咪"}],
-            }
-        ]
-    }))
