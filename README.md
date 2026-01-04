@@ -4,7 +4,7 @@ AI模块加载，根据ai功能划分模块并通过配置实现动态加载
 
 ---
 
-- 1、项目根目录/service/entrance.py
+- 1、项目根目录/ai_service/entrance.py
   - 初始化ai_entrance类
   - 配置文件: 项目根目录/service/module_settings.yaml
     - 根据yaml顺序加载modules目录下的模块
@@ -14,7 +14,7 @@ AI模块加载，根据ai功能划分模块并通过配置实现动态加载
 
 ---
 
-- 2、modules 模块文件结构
+- 2、ai_modules 模块文件结构
   - 根目录/
     - configs/
       - dataclasses.py config基类
@@ -50,9 +50,9 @@ AI模块加载，根据ai功能划分模块并通过配置实现动态加载
 ---
 
 # 其他模块
-- agent/ 会话存储
-- media_resource/ 文件处理
-- workflow/ 工作流
-- models/
-- config/ 
-- tools/ 工具
+- ai_agent/ 会话存储
+- ai_media_resource/ 文件处理
+- ai_workflow/ 工作流
+- ai_models/
+- ai_config/ 
+- ai_tools/ 工具
