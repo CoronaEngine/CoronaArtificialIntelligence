@@ -10,7 +10,7 @@ from langchain_core.tools import StructuredTool
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from ai_config.ai_config import AIConfig
-from ai_models import get_chat_model
+from ai_models.base_pool import get_chat_model
 from ai_modules.text_generate.configs.prompts import PRODUCT_TEXT_PROMPTS, MARKETING_TEXT_PROMPTS, CREATIVE_TEXT_PROMPTS, PLATFORM_TIPS
 from ai_tools.response_adapter import (
     build_part,
