@@ -14,14 +14,14 @@ import logging
 import threading
 from typing import Any, Callable, Dict, List, Optional, Union
 
-from ai_models.pool.category import MediaCategory
-from ai_models.pool.requests import MediaRequest
-from ai_models.pool.responses import (
+from ai_models.base_pool.category import MediaCategory
+from ai_models.base_pool.requests import MediaRequest
+from ai_models.base_pool.responses import (
     MediaResult,
     MultiMediaResult,
     ChatResult,
 )
-from ai_models.pool.legacy_fallback import (
+from ai_models.base_pool.legacy_fallback import (
     create_legacy_task,
     clear_legacy_clients,
 )
@@ -53,7 +53,7 @@ def _check_pool_available() -> bool:
             return _pool_available
 
         try:
-            import pool  # noqa: F401
+            import service_pool  # noqa: F401
             _pool_available = True
             logger.info("检测到 ai_pool 模块，使用账号池系统")
         except ImportError:
@@ -105,7 +105,7 @@ def _ensure_pool_initialized() -> bool:
             return True
 
         try:
-            from pool import (
+            from service_pool import (
                 initialize_account_pools,
                 is_pool_initialized,
             )
@@ -146,7 +146,7 @@ class _LegacyPoolStub:
     def is_available(self) -> bool:
         """检查旧客户端是否可用"""
         if self._available is None:
-            from ai_models.pool.legacy_fallback import (
+            from ai_models.base_pool.legacy_fallback import (
                 get_legacy_client,
             )
 
@@ -188,7 +188,7 @@ class PoolRegistry:
             return None
 
         try:
-            from pool import get_pool_registry
+            from service_pool import get_pool_registry
 
             # 确保账号池已初始化
             _ensure_pool_initialized()
@@ -208,7 +208,7 @@ class PoolRegistry:
             return category
 
         try:
-            from pool import MediaCategory as InnerCategory
+            from service_pool import MediaCategory as InnerCategory
 
             return InnerCategory(category.value)
         except Exception:
@@ -274,7 +274,7 @@ class PoolRegistry:
             return request
 
         try:
-            from pool import (
+            from service_pool import (
                 ImageRequest as InnerImageRequest,
                 VideoRequest as InnerVideoRequest,
                 SpeechRequest as InnerSpeechRequest,
@@ -283,7 +283,7 @@ class PoolRegistry:
                 OmniRequest as InnerOmniRequest,
                 DetectionRequest as InnerDetectionRequest,
             )
-            from ai_models.pool.requests import (
+            from ai_models.base_pool.requests import (
                 ImageRequest,
                 VideoRequest,
                 SpeechRequest,
@@ -454,7 +454,7 @@ def initialize_account_pools(
 
     if _check_pool_available():
         try:
-            from pool import (
+            from service_pool import (
                 initialize_account_pools as real_init,
             )
 
@@ -475,7 +475,7 @@ def is_pool_initialized() -> bool:
     """检查池是否已初始化"""
     if _check_pool_available():
         try:
-            from pool import is_pool_initialized as real_check
+            from service_pool import is_pool_initialized as real_check
 
             return real_check()
         except Exception:
@@ -491,7 +491,7 @@ def reset_pool_initialization() -> None:
 
     if _check_pool_available():
         try:
-            from pool import (
+            from service_pool import (
                 reset_pool_initialization as real_reset,
             )
 
@@ -551,7 +551,7 @@ def get_chat_model(
     # 池模式：尝试从对应池获取
     if _check_pool_available():
         try:
-            from pool import (
+            from service_pool import (
                 get_pool_registry as get_real_registry,
                 MediaCategory as InnerCategory,
             )

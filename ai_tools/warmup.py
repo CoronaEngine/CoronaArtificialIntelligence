@@ -114,7 +114,7 @@ def warmup_account_pools() -> None:
     注意：这会从配置加载账号并注册到池，后续媒体生成工具依赖此池。
     """
     try:
-        from ai_models.pool import (
+        from ai_models.base_pool import (
             initialize_account_pools,
         )
 

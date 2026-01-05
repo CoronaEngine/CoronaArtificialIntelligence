@@ -19,7 +19,7 @@ from ai_tools.response_adapter import (
     build_error_result,
 )
 from ai_modules.image_generate.configs.prompts import IMAGE_PROMPTS
-from ai_models.pool import (
+from ai_models.base_pool import (
     get_pool_registry,
     MediaCategory,
     ImageRequest,

@@ -20,7 +20,7 @@ from ai_tools.response_adapter import (
     build_error_result,
 )
 from ai_modules.speech_generate.configs.prompts import SPEECH_PROMPTS
-from ai_models.pool import (
+from ai_models.base_pool import (
     get_pool_registry,
     MediaCategory,
     SpeechRequest,

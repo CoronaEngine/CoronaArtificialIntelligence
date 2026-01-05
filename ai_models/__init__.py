@@ -16,7 +16,7 @@ from ai_modules.music_generate.tools.client_music import SunoMusicClient
 
 # pool 子模块的便捷导出
 # get_chat_model 现在由 pool 模块提供，自动检测池模式或降级模式
-from ai_models.pool import (
+from ai_models.base_pool import (
     get_pool_registry,
     initialize_account_pools,
     is_pool_initialized,

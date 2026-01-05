@@ -29,7 +29,7 @@ from langchain.agents import create_agent
 from langchain.agents.middleware import wrap_model_call
 
 from ai_config.ai_config import AIConfig, get_ai_config
-from ai_models.pool import get_chat_model
+from ai_models.base_pool import get_chat_model
 from ai_tools.registry import get_tool_registry
 
 

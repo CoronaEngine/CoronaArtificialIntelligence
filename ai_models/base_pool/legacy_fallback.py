@@ -11,8 +11,8 @@ import logging
 import threading
 from typing import Any, Callable, Dict, Optional, Union
 
-from ai_models.pool.category import MediaCategory
-from ai_models.pool.requests import (
+from ai_models.base_pool.category import MediaCategory
+from ai_models.base_pool.requests import (
     MediaRequest,
     ImageRequest,
     VideoRequest,
@@ -22,7 +22,7 @@ from ai_models.pool.requests import (
     OmniRequest,
     DetectionRequest,
 )
-from ai_models.pool.responses import (
+from ai_models.base_pool.responses import (
     MediaResult,
     MultiMediaResult,
     ChatResult,
