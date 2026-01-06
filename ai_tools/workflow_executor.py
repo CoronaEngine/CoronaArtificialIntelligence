@@ -61,7 +61,6 @@ def execute_workflow(
         # 获取工作流注册表
         registry = get_workflow_registry()
 
-
         # 确保工作流已发现
         if not registry.has(function_id):
             registry.discover()
