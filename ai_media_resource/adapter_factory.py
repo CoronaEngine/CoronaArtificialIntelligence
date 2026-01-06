@@ -51,7 +51,7 @@ def _try_import_oss_adapter():
 
     # Step 2: 检查 OSS 存储组件
     try:
-        from oss_storage import OSSStorageAdapter
+        from oss_storage.adapter import OSSStorageAdapter
 
         logger.info("✓ OSS 存储组件已安装 (oss_storage)")
         return OSSStorageAdapter
