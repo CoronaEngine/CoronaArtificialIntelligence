@@ -430,6 +430,8 @@ class ToolRegistry:
                     config = get_ai_config()
                 except Exception as e:
                     logger.warning(f"Failed to get AIConfig: {e}")
+                    
+            logger.info(f"AIConfig loaded for tool discovery: {config}")
 
             # 1. 执行已注册的 loaders
             logger.info("Loading builtin tools via registered loaders")
