@@ -66,12 +66,12 @@ def _build_ai_config() -> AIConfig:
     raw = _load_ai_config_data()
     # print(raw)
     # providers = _load_providers(raw.get("providers"))
-    from ai_service.entrance import ai_entrance
-    providers = ai_entrance.collector.AIConfig.providers
+    from ai_service.entrance import get_ai_entrance
+    providers = get_ai_entrance().collector.AIConfig.providers
     if not providers:
         raise RuntimeError("AI 配置中至少需要声明一个 provider")
 
-    return ai_entrance.collector.AIConfig
+    return get_ai_entrance().collector.AIConfig
 
 def get_ai_config() -> AIConfig:
     """获取 AI 配置（单例，线程安全）"""
