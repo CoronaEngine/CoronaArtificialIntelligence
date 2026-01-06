@@ -161,7 +161,11 @@ class MediaResourceRegistry:
         def wrapped_task():
             result = task_fn()
             # 处理返回值
-            if isinstance(result, StorageResult):
+            # 兼容不同路径导入造成的 StorageResult 类型不一致 (Duck Typing)
+            if hasattr(result, "url") and hasattr(result, "url_expire_time"):
+                url = result.url
+                url_expire_time = result.url_expire_time
+            elif isinstance(result, StorageResult):
                 url = result.url
                 url_expire_time = result.url_expire_time
             else:
@@ -335,7 +339,10 @@ class MediaResourceRegistry:
                 # 不传递 timeout，让 executor.wait() 根据任务类型智能推断
                 result = executor.wait(record.task_id)
                 # 从结果中提取 URL
-                if isinstance(result, StorageResult):
+                # 兼容不同路径导入造成的 StorageResult 类型不一致 (Duck Typing)
+                if hasattr(result, "url") and hasattr(result, "url_expire_time"):
+                    url = result.url
+                elif isinstance(result, StorageResult):
                     url = result.url
                 else:
                     url = result
