@@ -420,6 +420,7 @@ class ToolRegistry:
             count = 0
 
             # 如果没有传入 config，尝试获取
+            logger.info("Starting tool discovery process")
             if config is None:
                 try:
                     from ai_config.ai_config import (
@@ -431,6 +432,7 @@ class ToolRegistry:
                     logger.warning(f"Failed to get AIConfig: {e}")
 
             # 1. 执行已注册的 loaders
+            logger.info("Loading builtin tools via registered loaders")
             for spec in self._loaders:
                 try:
                     if spec.requires_config:
