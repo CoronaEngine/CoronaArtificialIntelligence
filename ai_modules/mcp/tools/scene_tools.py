@@ -15,7 +15,7 @@ from ai_tools.response_adapter import (
     build_success_result,
     build_error_result,
 )
-from ai_config.constants import DEFAULT_SCENE_NAME
+DEFAULT_SCENE_NAME = "MainScene"
 
 if TYPE_CHECKING:
     from Backend.utils import SceneApplicationService
