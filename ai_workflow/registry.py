@@ -145,7 +145,7 @@ class WorkflowRegistry:
         flows_path = Path(__file__).parent / "flows"
 
         if not flows_path.exists():
-            logger.debug(f"Flows directory not found: {flows_path}")
+            logger.info(f"Flows directory not found: {flows_path}")
             return 0
 
         # 扫描 flows 目录下的模块
