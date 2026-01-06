@@ -79,7 +79,7 @@ def execute_workflow(
 
         try:
             # 初始化会话追踪
-            from ai_workflow import get_workflow_metadata
+            from workflow import get_workflow_metadata
 
             workflow_meta = get_workflow_metadata(function_id)
             workflow_name = (
