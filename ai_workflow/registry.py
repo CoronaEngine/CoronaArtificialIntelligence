@@ -205,7 +205,7 @@ class WorkflowRegistry:
 
         try:
             # 尝试导入外部工作流模块
-            external_module = importlib.import_module("ai_workflows")
+            external_module = importlib.import_module("workflows")
 
             # 查找 load_external_workflows 函数
             load_fn = getattr(external_module, "load_external_workflows", None)
