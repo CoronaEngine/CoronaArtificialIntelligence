@@ -150,7 +150,6 @@ class WorkflowRegistry:
 
         # 扫描 flows 目录下的模块
         package_name = "ai_workflow.flows"
-        logger.info(f"Scanning builtin workflows in {flows_path}")
 
         for module_info in pkgutil.iter_modules([str(flows_path)]):
             if module_info.name.startswith("_"):
@@ -271,5 +270,3 @@ def get_workflow_registry() -> WorkflowRegistry:
 
 
 __all__ = ["WorkflowRegistry", "get_workflow_registry"]
-
-print()
