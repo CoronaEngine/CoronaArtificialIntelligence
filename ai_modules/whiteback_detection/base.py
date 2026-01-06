@@ -18,6 +18,7 @@ from ai_tools.common import (
     session_context
 )
 from ai_tools.concurrency import session_concurrency
+from ai_tools.session_tracking import init_session, update_session_state, set_session_error
 
 # 日志配置
 logger = logging.getLogger(__name__)
@@ -66,6 +67,14 @@ def _handle_whiteback_detection_inner(
 ) -> str:
     """白底图检测内部实现（在并发控制内执行）"""
     try:
+        # 初始化会话追踪
+        init_session(
+            session_id=session_id,
+            input_type="whiteback_detection",
+            parameters=request_data,
+        )
+        update_session_state(session_id, "running")
+
         logger.debug(f"收到白底图检测请求: {request_data}")
 
         # 提取图片 URL 列表
@@ -168,6 +177,8 @@ def _handle_whiteback_detection_inner(
 
         logger.info(f"检测完成，共检测 {len(all_parts)} 张图片")
 
+        update_session_state(session_id, "completed")
+
         return build_success_response(
             interface_type="whiteback_detection",
             session_id=session_id,
@@ -177,6 +188,8 @@ def _handle_whiteback_detection_inner(
 
     except Exception as exc:
         logger.error(f"白底图检测异常: {exc}")
+        set_session_error(session_id, str(exc))
+        update_session_state(session_id, "failed")
         return build_error_response(
             interface_type="whiteback_detection",
             session_id=session_id,

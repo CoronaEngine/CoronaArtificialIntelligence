@@ -16,6 +16,7 @@ from ai_tools.common import (
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
+from ai_tools.session_tracking import init_session, update_session_state, set_session_error
 
 logger = logging.getLogger(__name__)
 
@@ -67,6 +68,14 @@ def _handle_video_generation_inner(
 ) -> str:
     """视频生成内部实现（在并发控制内执行）"""
     try:
+        # 初始化会话追踪
+        init_session(
+            session_id=session_id,
+            input_type="video",
+            parameters=request_data,
+        )
+        update_session_state(session_id, "running")
+
         logger.debug(f"收到视频生成请求: {request_data}")
         extracted = _extract_prompt_and_image(request_data)
         prompt = extracted["prompt"]
@@ -164,6 +173,8 @@ def _handle_video_generation_inner(
             # 解析失败时抛出异常，触发错误响应
             raise RuntimeError(f"视频资源解析失败: {e}") from e
 
+        update_session_state(session_id, "completed")
+
         return build_success_response(
             interface_type="video",
             session_id=session_id,
@@ -172,6 +183,8 @@ def _handle_video_generation_inner(
         )
     except Exception as exc:  # noqa: BLE001
         logger.error(f"视频生成异常: {exc}")
+        set_session_error(session_id, str(exc))
+        update_session_state(session_id, "failed")
         return build_error_response(
             interface_type="video",
             session_id=session_id,

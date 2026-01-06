@@ -16,6 +16,7 @@ from ai_tools.common import (
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
+from ai_tools.session_tracking import update_session_state, set_session_error, init_session
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +62,14 @@ def _handle_speech_generation_inner(
 ) -> str:
     """语音生成内部实现（在并发控制内执行）"""
     try:
+        # 初始化会话追踪
+        init_session(
+            session_id=session_id,
+            input_type="speech",
+            parameters=request_data,
+        )
+        update_session_state(session_id, "running")
+
         logger.debug(f"收到语音生成请求: {request_data}")
         text = _extract_text(request_data)
         if not text:
@@ -154,6 +163,8 @@ def _handle_speech_generation_inner(
             # 解析失败时抛出异常，触发错误响应
             raise RuntimeError(f"语音资源解析失败: {e}") from e
 
+        update_session_state(session_id, "completed")
+
         return build_success_response(
             interface_type="speech",
             session_id=session_id,
@@ -162,6 +173,8 @@ def _handle_speech_generation_inner(
         )
     except Exception as exc:  # noqa: BLE001
         logger.error(f"语音生成异常: {exc}")
+        set_session_error(session_id, str(exc))
+        update_session_state(session_id, "failed")
         return build_error_response(
             interface_type="speech",
             session_id=session_id,
