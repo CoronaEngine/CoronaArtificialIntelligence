@@ -23,6 +23,7 @@ from ai_tools.common import (
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
+from ai_tools.helpers import request_time_diff
 
 logger = logging.getLogger(__name__)
 
@@ -123,6 +124,7 @@ def handle_integrated_entrance(payload: Any) -> str:
     执行逻辑：Assistant (Thought) -> Tool (Result) [挂载到前者]
     特殊情况：Tool (Text) -> 独立消息
     """
+    request_time_diff(payload)
     request_data: Dict[str, Any] = ensure_dict(payload)
     metadata = request_data.get("metadata", {})
     session_id = request_data.get("session_id", "default")
@@ -293,6 +295,7 @@ def handle_integrated_entrance_stream(payload: Any):
     Yields:
         每个 yield 是一个完整的 JSON 响应字符串，包含一个 llm_content entry
     """
+    request_time_diff(payload)
     request_data: Dict[str, Any] = ensure_dict(payload)
     metadata = request_data.get("metadata", {})
     session_id = request_data.get("session_id", "default")

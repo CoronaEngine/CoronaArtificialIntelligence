@@ -18,6 +18,7 @@ from ai_tools.common import (
     session_context
 )
 from ai_tools.concurrency import session_concurrency
+from ai_tools.helpers import request_time_diff
 from ai_tools.session_tracking import init_session, update_session_state, set_session_error
 
 # 日志配置
@@ -40,6 +41,7 @@ def handle_whiteback_detection(payload: Any) -> str:
     - part[].content_url: 原始图片 URL
     - part[].parameter.white_base_value: 白底值（0 || 1）
     """
+    request_time_diff(payload)
     request_data: Dict[str, Any] = ensure_dict(payload)
     session_id = request_data.get("session_id") or "default"
     metadata = request_data.get("metadata", {})

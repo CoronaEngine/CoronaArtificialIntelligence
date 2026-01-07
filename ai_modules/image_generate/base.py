@@ -17,6 +17,7 @@ from ai_tools.common import (
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
+from ai_tools.helpers import request_time_diff
 from ai_tools.session_tracking import init_session, update_session_state, set_session_error
 from ai_tools.workflow_executor import (
     extract_function_id,
@@ -52,6 +53,7 @@ def handle_image_generation(payload: Any) -> str:
     - 如果请求包含 function_id → 调用对应的工作流
     - 如果没有 function_id → 使用直接工具调用模式
     """
+    request_time_diff(payload)
     request_data: Dict[str, Any] = ensure_dict(payload)
     session_id = request_data.get("session_id") or "default"
     metadata = request_data.get("metadata", {})

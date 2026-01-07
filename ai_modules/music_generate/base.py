@@ -16,6 +16,7 @@ from ai_tools.common import (
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
+from ai_tools.helpers import request_time_diff
 from ai_tools.session_tracking import init_session, update_session_state, set_session_error
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,7 @@ def _extract_prompt(request_data: Dict[str, Any]) -> str:
 @register_entrance(handler_name="handle_music_generation")
 def handle_music_generation(payload: Any) -> str:
     """音乐生成三层结构。"""
+    request_time_diff(payload)
     request_data: Dict[str, Any] = ensure_dict(payload)
     metadata = request_data.get("metadata", {})
     session_id = request_data.get("session_id") or "default"
