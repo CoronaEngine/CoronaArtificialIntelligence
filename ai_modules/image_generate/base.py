@@ -5,7 +5,6 @@ from typing import Any, Dict
 import logging
 
 from ai_config.ai_config import get_ai_config
-from ai_modules.media.tools.base import extract_prompt_from_llm_content, extract_images_from_request
 
 from ai_tools.common import (
     ensure_dict,
@@ -18,7 +17,16 @@ from ai_tools.common import (
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
 from ai_tools.helpers import request_time_diff
-from ai_tools.session_tracking import init_session, update_session_state, set_session_error
+from ai_tools.request_parser import (
+    normalize_image_size,
+    extract_prompt_from_llm_content,
+    extract_images_from_request,
+)
+from ai_tools.session_tracking import (
+    init_session,
+    update_session_state,
+    set_session_error,
+)
 from ai_tools.workflow_executor import (
     extract_function_id,
     execute_workflow,
@@ -27,22 +35,45 @@ from ai_tools.workflow_executor import (
 logger = logging.getLogger(__name__)
 
 
-def _normalize_image_size(value: str | None) -> str | None:
-    """规范化 image_size 表达，如 '1k' -> '1K'.
+def _clean_image_parts(original_parts: list[dict]) -> list[dict]:
+    """清洗图像生成返回的 parts
 
-    仅进行大小写归一，不更改语义；空值直接返回。
+    Args:
+        original_parts: 原始 parts 列表
+
+    Returns:
+        清洗后的 parts 列表
     """
-    if value is None:
-        return None
-    v = value.strip()
-    # 常见写法：1k/2k/4k/8k，统一为大写 K
-    if v.lower().endswith("k"):
-        return v[:-1] + "K"
-    return v
+    cleaned_parts = []
+    for part in original_parts:
+        cleaned_part = {
+            "content_type": part.get("content_type"),
+            "content_url": part.get("content_url"),
+            "content_text": part.get("content_text", ""),
+        }
+        # 保留 url_expire_time 字段
+        if "url_expire_time" in part:
+            cleaned_part["url_expire_time"] = part["url_expire_time"]
+        # 严格过滤 parameter
+        if "parameter" in part:
+            original_param = part["parameter"]
+            cleaned_param = {}
+            if "resolution" in original_param:
+                cleaned_param["resolution"] = original_param["resolution"]
+            if "image_size" in original_param:
+                cleaned_param["image_size"] = normalize_image_size(
+                    original_param["image_size"]
+                )
+            if cleaned_param:
+                cleaned_part["parameter"] = cleaned_param
 
-
-# 使用基类提供的 extract_prompt_from_llm_content 和 extract_images_from_request
-
+        # 移除 None 值字段
+        cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
+        # 当 content_text 为空字符串时移除该键，避免噪声
+        if "content_text" in cleaned_part and cleaned_part["content_text"] == "":
+            cleaned_part.pop("content_text", None)
+        cleaned_parts.append(cleaned_part)
+    return cleaned_parts
 
 
 @register_entrance(handler_name="handle_image_generation")
@@ -123,7 +154,7 @@ def _handle_image_generation_inner(
         logger.debug(f"使用 resolution: {resolution}")
 
         # 提取 image_size 参数（分辨率档位：1K/2K/4K，默认 2K）
-        image_size = _normalize_image_size(
+        image_size = normalize_image_size(
             extract_parameter(request_data, "image_size", "2K")
         )
         # 确保有默认值
@@ -160,35 +191,7 @@ def _handle_image_generation_inner(
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
-        cleaned_parts = []
-        for part in original_parts:
-            cleaned_part = {
-                "content_type": part.get("content_type"),
-                "content_url": part.get("content_url"),
-                "content_text": part.get("content_text", ""),
-            }
-            # 保留 url_expire_time 字段
-            if "url_expire_time" in part:
-                cleaned_part["url_expire_time"] = part["url_expire_time"]
-            # 严格过滤 parameter
-            if "parameter" in part:
-                original_param = part["parameter"]
-                cleaned_param = {}
-                if "resolution" in original_param:
-                    cleaned_param["resolution"] = original_param["resolution"]
-                if "image_size" in original_param:
-                    cleaned_param["image_size"] = _normalize_image_size(
-                        original_param["image_size"]
-                    )
-                if cleaned_param:
-                    cleaned_part["parameter"] = cleaned_param
-
-            # 移除 None 值字段
-            cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
-            # 当 content_text 为空字符串时移除该键，避免噪声
-            if "content_text" in cleaned_part and cleaned_part["content_text"] == "":
-                cleaned_part.pop("content_text", None)
-            cleaned_parts.append(cleaned_part)
+        cleaned_parts = _clean_image_parts(original_parts)
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:

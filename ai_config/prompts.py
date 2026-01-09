@@ -35,19 +35,6 @@ class DetectionPromptConfig:
 
 
 @dataclass(frozen=True)
-class MediaToolPrompts:
-    """媒体工具提示词集合"""
-
-    image: ToolPromptConfig
-    video: ToolPromptConfig
-    speech: ToolPromptConfig
-    music: ToolPromptConfig
-    omni: ToolPromptConfig
-    # detection 已迁移到 InnerAgentWorkflow/ai_tools，此处保留可选字段以兼容
-    detection: DetectionPromptConfig | None = None
-
-
-@dataclass(frozen=True)
 class TextToolPrompts:
     """文本生成工具提示词集合"""
 

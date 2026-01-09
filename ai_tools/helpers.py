@@ -1,6 +1,7 @@
 """
 配置加载辅助函数
 """
+
 import datetime
 import logging
 from typing import Any
@@ -23,6 +24,7 @@ def _as_float(value: Any, default: float) -> float:
         return float(value)
     except (TypeError, ValueError):
         return default
+
 
 def request_time_diff(payload: Any):
     # 超时处理

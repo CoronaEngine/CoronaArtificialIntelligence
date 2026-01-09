@@ -17,23 +17,51 @@ from ai_tools.common import (
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
 from ai_tools.helpers import request_time_diff
-from ai_tools.session_tracking import update_session_state, set_session_error, init_session
+from ai_tools.request_parser import extract_prompt_from_llm_content
+from ai_tools.session_tracking import (
+    update_session_state,
+    set_session_error,
+    init_session,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _extract_text(request_data: Dict[str, Any]) -> str:
-    if "text" in request_data:
-        return request_data.get("text", "")
-    llm_content = request_data.get("llm_content")
-    if isinstance(llm_content, list) and llm_content:
-        parts = llm_content[0].get("part", [])
-        txt = "\n".join(
-            p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-        ).strip()
-        logger.debug(f"提取到 text: {txt}")
-        return txt
-    return ""
+def _clean_speech_parts(original_parts: list[dict]) -> list[dict]:
+    """清洗语音生成返回的 parts
+
+    Args:
+        original_parts: 原始 parts 列表
+
+    Returns:
+        清洗后的 parts 列表
+    """
+    cleaned_parts = []
+    for part in original_parts:
+        cleaned_part = {
+            "content_type": part.get("content_type"),
+            "content_url": part.get("content_url"),
+            "content_text": part.get("content_text", ""),
+        }
+        # 保留 url_expire_time 字段
+        if "url_expire_time" in part:
+            cleaned_part["url_expire_time"] = part["url_expire_time"]
+        # 严格过滤 parameter
+        if "parameter" in part:
+            original_param = part["parameter"]
+            cleaned_param = {}
+            if "speech_type" in original_param:
+                cleaned_param["speech_type"] = original_param["speech_type"]
+            if "duration" in original_param:
+                cleaned_param["duration"] = original_param["duration"]
+            if cleaned_param:
+                cleaned_part["parameter"] = cleaned_param
+
+        # 移除 None 值字段
+        cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
+        cleaned_parts.append(cleaned_part)
+    return cleaned_parts
+
 
 @register_entrance(handler_name="handle_speech_generation")
 def handle_speech_generation(payload: Any) -> str:
@@ -73,7 +101,7 @@ def _handle_speech_generation_inner(
         update_session_state(session_id, "running")
 
         logger.debug(f"收到语音生成请求: {request_data}")
-        text = _extract_text(request_data)
+        text = extract_prompt_from_llm_content(request_data)
         if not text:
             raise ValueError("缺少待合成的文本")
 
@@ -122,30 +150,7 @@ def _handle_speech_generation_inner(
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
-        cleaned_parts = []
-        for part in original_parts:
-            cleaned_part = {
-                "content_type": part.get("content_type"),
-                "content_url": part.get("content_url"),
-                "content_text": part.get("content_text", ""),
-            }
-            # 保留 url_expire_time 字段
-            if "url_expire_time" in part:
-                cleaned_part["url_expire_time"] = part["url_expire_time"]
-            # 严格过滤 parameter
-            if "parameter" in part:
-                original_param = part["parameter"]
-                cleaned_param = {}
-                if "speech_type" in original_param:
-                    cleaned_param["speech_type"] = original_param["speech_type"]
-                if "duration" in original_param:
-                    cleaned_param["duration"] = original_param["duration"]
-                if cleaned_param:
-                    cleaned_part["parameter"] = cleaned_param
-
-            # 移除 None 值字段
-            cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
-            cleaned_parts.append(cleaned_part)
+        cleaned_parts = _clean_speech_parts(original_parts)
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:

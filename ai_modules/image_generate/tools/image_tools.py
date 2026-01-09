@@ -25,7 +25,6 @@ from ai_models.base_pool import (
     ImageRequest,
     MediaResult,
 )
-from ai_modules.media.tools.media_tools import _is_media_tool_enabled
 
 
 class ImageGenerationInput(BaseModel):
@@ -62,10 +61,6 @@ def load_image_tools(config: AIConfig) -> List[StructuredTool]:
     - 熔断与自动恢复
     - 多供应商适配
     """
-    image_cfg = config.media.image
-    if not _is_media_tool_enabled(image_cfg, config):
-        return []
-
     # 获取池注册表（自动检测账号池或降级模式）
     pool_registry = get_pool_registry()
     if pool_registry.get_pool(MediaCategory.IMAGE) is None:

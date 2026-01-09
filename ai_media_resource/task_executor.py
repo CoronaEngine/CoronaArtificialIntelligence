@@ -43,13 +43,13 @@ def _infer_timeout_from_metadata(metadata: Dict[str, Any]) -> float:
         return _DEFAULT_WAIT_TIMEOUT
 
     try:
-        from InnerAgentWorkflow.utils.deadline import DeadlineConfig
+        from app.utils.deadline import DeadlineConfig
 
         return DeadlineConfig.get(resource_type)
     except ImportError:
         # 降级：手动映射
         mapping = {
-            "image": 900.0,  # 15分钟 ← 与任务执行超时一致
+            "image": 300.0,  # 5分钟
             "video": 600.0,  # 10分钟
             "music": 300.0,  # 5分钟
             "audio": 300.0,
@@ -64,7 +64,7 @@ def _get_deadline_remaining(default: float, reserve: float = 5.0) -> float:
     """从 DeadlineContext 获取剩余时间"""
     # ... (移除默认值 150.0，改为必须传入)
     try:
-        from InnerAgentWorkflow.utils.deadline import (
+        from app.utils.deadline import (
             get_remaining,
             is_in_task_context,
             warn_nested_call,

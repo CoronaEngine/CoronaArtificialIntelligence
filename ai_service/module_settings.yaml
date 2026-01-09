@@ -52,10 +52,6 @@ modules:
     enabled: true
     description: "音乐生成"
 
-  - name: media
-    enabled: true
-    description: "媒体处理"
-
   # 检测模块
   - name: detection
     enabled: true
