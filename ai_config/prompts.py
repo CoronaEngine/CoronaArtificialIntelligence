@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Dict
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ToolPromptConfig:
     """单个工具的提示词配置"""
 
@@ -14,7 +14,7 @@ class ToolPromptConfig:
     fields: Dict[str, str] = field(default_factory=dict)  # 字段名 -> 字段描述
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class TextToolPromptConfig:
     """文本生成工具的提示词配置（包含模板）"""
 
@@ -24,7 +24,7 @@ class TextToolPromptConfig:
     user_prompt: str = ""  # 用户提示词模板
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class DetectionPromptConfig:
     """目标检测工具的提示词配置（包含检测提示词模板）"""
 
@@ -44,7 +44,7 @@ class TextToolPrompts:
     platform_tips: Dict[str, str] = field(default_factory=dict)
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class SceneToolPrompts:
     """场景工具提示词集合"""
 

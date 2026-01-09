@@ -4,7 +4,7 @@
 
 from dataclasses import dataclass
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class SessionConfig:
     """会话管理配置"""
 

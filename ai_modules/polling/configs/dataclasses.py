@@ -4,7 +4,7 @@
 
 from dataclasses import dataclass
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class PollingConfig:
     """异步任务轮询配置"""
 
