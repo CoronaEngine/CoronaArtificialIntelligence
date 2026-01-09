@@ -29,7 +29,7 @@ def request_time_diff(payload: Any):
     # 检查请求时间是否超过240秒
     if payload.get("start_datetime"):
         now = datetime.datetime.now()
-        request_time = payload.get("start_datetime")
+        request_time = datetime.datetime.strptime(payload.get("start_datetime"), "%Y-%m-%d %H:%M:%S")
 
         # 计算时间差（秒）
         time_diff = (now - request_time).total_seconds()
