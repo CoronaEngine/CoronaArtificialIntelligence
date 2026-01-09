@@ -507,7 +507,7 @@ def create_legacy_omni_task(
             if url.startswith(FILEID_SCHEME):
                 file_id = url[len(FILEID_SCHEME):]
                 registry = get_media_registry()
-                result = registry.resolve(file_id, timeout=omni_config.request_timeout, encode_to_base64=True)
+                result = registry.resolve(file_id, encode_to_base64=True)
                 if isinstance(result, dict):
                     return result.get("url", "")
                 return result
@@ -588,7 +588,7 @@ def create_legacy_detection_task(
         if image_url.startswith(FILEID_SCHEME):
             file_id = image_url[len(FILEID_SCHEME):]
             registry = get_media_registry()
-            image_url = registry.resolve(file_id, timeout=detection_config.request_timeout)
+            image_url = registry.resolve(file_id)
             if image_url.startswith("file://"):
                 image_url = file_url_to_data_uri(image_url)
         elif image_url.startswith("file://"):
