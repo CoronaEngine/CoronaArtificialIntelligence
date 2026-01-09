@@ -70,9 +70,9 @@ def resize_image_with_constraints(
 
             config = get_ai_config()
             if max_size is None:
-                max_size = config.media.image_constraints.max_size
+                max_size = config.image_constraints.max_size
             if min_size is None:
-                min_size = config.media.image_constraints.min_size
+                min_size = config.image_constraints.min_size
         except Exception:
             # 回退到硬编码默认值
             if max_size is None:

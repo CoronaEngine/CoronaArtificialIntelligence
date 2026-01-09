@@ -17,23 +17,51 @@ from ai_tools.common import (
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
 from ai_tools.helpers import request_time_diff
-from ai_tools.session_tracking import init_session, update_session_state, set_session_error
+from ai_tools.request_parser import extract_prompt_from_llm_content
+from ai_tools.session_tracking import (
+    init_session,
+    update_session_state,
+    set_session_error,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _extract_prompt(request_data: Dict[str, Any]) -> str:
-    if "prompt" in request_data:
-        return request_data.get("prompt", "")
-    llm_content = request_data.get("llm_content")
-    if isinstance(llm_content, list) and llm_content:
-        parts = llm_content[0].get("part", [])
-        prompt = "\n".join(
-            p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-        ).strip()
-        logger.debug(f"提取到 prompt: {prompt}")
-        return prompt
-    return ""
+def _clean_music_parts(original_parts: list[dict]) -> list[dict]:
+    """清洗音乐生成返回的 parts
+
+    Args:
+        original_parts: 原始 parts 列表
+
+    Returns:
+        清洗后的 parts 列表
+    """
+    cleaned_parts = []
+    for part in original_parts:
+        cleaned_part = {
+            "content_type": part.get("content_type"),
+            "content_url": part.get("content_url"),
+            "content_text": part.get("content_text", ""),
+        }
+        # 保留 url_expire_time 字段
+        if "url_expire_time" in part:
+            cleaned_part["url_expire_time"] = part["url_expire_time"]
+        # 严格过滤 parameter
+        if "parameter" in part:
+            original_param = part["parameter"]
+            cleaned_param = {}
+            if "music_style" in original_param:
+                cleaned_param["music_style"] = original_param["music_style"]
+            if "duration" in original_param:
+                cleaned_param["duration"] = original_param["duration"]
+            if cleaned_param:
+                cleaned_part["parameter"] = cleaned_param
+
+        # 移除 None 值字段
+        cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
+        cleaned_parts.append(cleaned_part)
+    return cleaned_parts
+
 
 @register_entrance(handler_name="handle_music_generation")
 def handle_music_generation(payload: Any) -> str:
@@ -73,7 +101,7 @@ def _handle_music_generation_inner(
         update_session_state(session_id, "running")
 
         logger.debug(f"收到音乐生成请求: {request_data}")
-        prompt = _extract_prompt(request_data)
+        prompt = extract_prompt_from_llm_content(request_data)
         if not prompt:
             raise ValueError("缺少音乐生成的 prompt")
 
@@ -121,30 +149,7 @@ def _handle_music_generation_inner(
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
-        cleaned_parts = []
-        for part in original_parts:
-            cleaned_part = {
-                "content_type": part.get("content_type"),
-                "content_url": part.get("content_url"),
-                "content_text": part.get("content_text", ""),
-            }
-            # 保留 url_expire_time 字段
-            if "url_expire_time" in part:
-                cleaned_part["url_expire_time"] = part["url_expire_time"]
-            # 严格过滤 parameter
-            if "parameter" in part:
-                original_param = part["parameter"]
-                cleaned_param = {}
-                if "music_style" in original_param:
-                    cleaned_param["music_style"] = original_param["music_style"]
-                if "duration" in original_param:
-                    cleaned_param["duration"] = original_param["duration"]
-                if cleaned_param:
-                    cleaned_part["parameter"] = cleaned_param
-
-            # 移除 None 值字段
-            cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
-            cleaned_parts.append(cleaned_part)
+        cleaned_parts = _clean_music_parts(original_parts)
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:

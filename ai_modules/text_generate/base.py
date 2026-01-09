@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 
-from typing import Any, Dict, List
+from typing import Any, Dict
 import logging
 
 from ai_agent.conversation import default_session_id
 from ai_config.ai_config import get_ai_config
-from ai_modules.media.tools.base import extract_prompt_from_llm_content
 
 from ai_tools.common import (
     ensure_dict,
@@ -20,23 +19,47 @@ from ai_tools.common import (
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
 from ai_tools.helpers import request_time_diff
-from ai_tools.session_tracking import init_session, update_session_state, set_session_error
+from ai_tools.request_parser import extract_prompt_from_llm_content
+from ai_tools.session_tracking import (
+    init_session,
+    update_session_state,
+    set_session_error,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _extract_instruction(parts: List[Dict[str, Any]]) -> str:
-    """从 content 列表中提取文本内容。"""
-    instruction = ""
-    for item in parts:
-        if item.get("type") == "text":
-            instruction += item.get("text", "") + "\n"
-    result = instruction.strip()
-    logger.debug(f"提取到 instruction: {result}")
-    return result
-
-
 # 使用基类提供的 extract_prompt_from_llm_content
+
+
+def _clean_text_parts(original_parts: list[dict]) -> list[dict]:
+    """清洗文本生成返回的 parts
+
+    Args:
+        original_parts: 原始 parts 列表
+
+    Returns:
+        清洗后的 parts 列表
+    """
+    cleaned_parts = []
+    for part in original_parts:
+        cleaned_part = {
+            "content_type": part.get("content_type"),
+            "content_text": part.get("content_text", ""),
+        }
+        # 严格过滤 parameter
+        if "parameter" in part:
+            original_param = part["parameter"]
+            cleaned_param = {}
+            if "text_type" in original_param:
+                cleaned_param["text_type"] = original_param["text_type"]
+            if cleaned_param:
+                cleaned_part["parameter"] = cleaned_param
+
+        # 移除 None 值字段
+        cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
+        cleaned_parts.append(cleaned_part)
+    return cleaned_parts
 
 
 @register_entrance(handler_name="handle_text_generation")
@@ -144,24 +167,7 @@ def _handle_text_generation_inner(
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
-        cleaned_parts = []
-        for part in original_parts:
-            cleaned_part = {
-                "content_type": part.get("content_type"),
-                "content_text": part.get("content_text", ""),
-            }
-            # 严格过滤 parameter
-            if "parameter" in part:
-                original_param = part["parameter"]
-                cleaned_param = {}
-                if "text_type" in original_param:
-                    cleaned_param["text_type"] = original_param["text_type"]
-                if cleaned_param:
-                    cleaned_part["parameter"] = cleaned_param
-
-            # 移除 None 值字段
-            cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
-            cleaned_parts.append(cleaned_part)
+        cleaned_parts = _clean_text_parts(original_parts)
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:
@@ -189,7 +195,9 @@ def _handle_text_generation_inner(
             metadata=metadata,
             parts=cleaned_parts,
         )
-    except Exception as exc:  # noqa: BLE001        set_session_error(session_id, str(exc))
+    except (
+        Exception
+    ) as exc:  # noqa: BLE001        set_session_error(session_id, str(exc))
         update_session_state(session_id, "failed")
         logger.error(f"文本生成异常: {exc}")
         set_session_error(session_id, str(exc))

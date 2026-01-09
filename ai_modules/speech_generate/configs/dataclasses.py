@@ -8,12 +8,19 @@ from typing import Any, Dict, Optional
 
 
 @dataclass(frozen=False)
+class AudioConfig:
+    """音频配置"""
+
+    sample_rate: int = 24000
+    bitrate: int = 160
+
+
+@dataclass(frozen=False)
 class TTSConfig:
     """TTS 凭证配置"""
 
     appid: str | None = None
     token: str | None = None
-
 
 
 @dataclass

@@ -15,61 +15,21 @@ from ai_tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
+    session_context,
     parse_tool_response,
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
 from ai_tools.context import set_current_session, reset_current_session
 from ai_tools.helpers import request_time_diff
+from ai_tools.request_parser import (
+    extract_prompt_from_llm_content,
+    extract_images_from_request,
+)
 from ai_tools.session_tracking import init_session, update_session_state
 
 logger = logging.getLogger(__name__)
 
-
-def _extract_image_url_from_llm_content(data: Dict[str, Any]) -> str:
-    """从 llm_content 中提取图片 URL。
-
-    规则：
-    1. 遍历 llm_content[0]["part"] 中的所有 part。
-    2. 返回第一个 content_type 为 "image" 的 content_url。
-    """
-    llm_content = data.get("llm_content", [])
-    if not isinstance(llm_content, list) or not llm_content:
-        return ""
-
-    parts = llm_content[0].get("part", [])
-    for part in parts:
-        if part.get("content_type") == "image":
-            url = part.get("content_url")
-            if url:
-                logger.debug(f"提取到图片 URL: {url}")
-                return url
-
-    return ""
-
-
-def _extract_target_description_from_llm_content(data: Dict[str, Any]) -> str:
-    """从 llm_content 中提取目标描述文本。
-
-    规则：
-    1. 遍历 llm_content[0]["part"] 中的所有 text 类型 part。
-    2. 合并所有文本内容作为目标描述。
-    """
-    llm_content = data.get("llm_content", [])
-    if not isinstance(llm_content, list) or not llm_content:
-        return ""
-
-    parts = llm_content[0].get("part", [])
-    texts = []
-    for part in parts:
-        if part.get("content_type") == "text":
-            text = part.get("content_text", "").strip()
-            if text:
-                texts.append(text)
-
-    target_description = " ".join(texts)
-    logger.debug(f"提取到目标描述: {target_description}")
-    return target_description
 
 @register_entrance(handler_name="handle_detection")
 def handle_detection(payload: Any) -> str:
@@ -130,12 +90,13 @@ def _handle_detection_inner(
         logger.debug(f"收到目标检测请求: {request_data}")
 
         # 提取图片 URL
-        image_url = _extract_image_url_from_llm_content(request_data)
+        image_urls = extract_images_from_request(request_data)
+        image_url = image_urls[0] if image_urls else ""
         if not image_url:
             raise ValueError("缺少待检测的图片，请在 part 中提供 content_type 为 'image' 的图片 URL")
 
         # 提取目标描述（可选）
-        target_description = _extract_target_description_from_llm_content(request_data)
+        target_description = extract_prompt_from_llm_content(request_data)
 
         # 加载检测工具（从外部模块）
         from tools.detection_tools import (
@@ -149,11 +110,12 @@ def _handle_detection_inner(
         detection_tool = tools[0]
 
         # 调用检测工具
-        logger.debug(f"进入 session_context: {session_id}")
-        result_json = detection_tool.func(
-            image_url=image_url,
-            target_description=target_description,
-        )
+        with session_context(session_id):
+            logger.debug(f"进入 session_context: {session_id}")
+            result_json = detection_tool.func(
+                image_url=image_url,
+                target_description=target_description,
+            )
         logger.debug(f"detection_tool 返回: {result_json}")
 
         # 解析 Tool 返回的 Envelope JSON

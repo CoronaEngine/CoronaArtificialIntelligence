@@ -120,7 +120,7 @@ def load_speech_tools(config: AIConfig):
             from ai_config.ai_config import get_ai_config
 
             ai_config = get_ai_config()
-            sample_rate = ai_config.media.audio.sample_rate
+            sample_rate = ai_config.audio.sample_rate
         except Exception:
             sample_rate = 24000
 
