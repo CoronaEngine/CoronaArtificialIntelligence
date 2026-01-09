@@ -5,7 +5,7 @@ LLM 模型配置
 from dataclasses import dataclass
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ChatModelConfig:
     """聊天模型配置"""
 
@@ -16,7 +16,7 @@ class ChatModelConfig:
     system_prompt: str = ""  # 默认值由加载器设置
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ToolModelConfig:
     """工具模型配置"""
 

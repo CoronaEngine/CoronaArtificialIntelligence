@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from typing import Dict
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ProviderConfig:
     """AI 服务提供商配置"""
 

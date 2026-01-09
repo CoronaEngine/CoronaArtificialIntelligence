@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, Optional
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class TTSConfig:
     """TTS 凭证配置"""
 

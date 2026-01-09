@@ -5,7 +5,7 @@
 from dataclasses import dataclass, field
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class AudioConfig:
     """音频配置"""
 
@@ -13,7 +13,7 @@ class AudioConfig:
     bitrate: int = 160
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ImageConstraintsConfig:
     """图像尺寸约束配置"""
 
@@ -21,7 +21,7 @@ class ImageConstraintsConfig:
     min_size: int = 360
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class MediaToolConfig:
     """媒体工具配置"""
 
@@ -31,7 +31,7 @@ class MediaToolConfig:
     base_url: str | None = None
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class OmniModelConfig:
     """多模态理解模型配置"""
 
@@ -44,7 +44,7 @@ class OmniModelConfig:
     request_timeout: float = 150.0  # 请求超时时间（秒）
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class DetectionModelConfig:
     """目标检测模型配置"""
 
@@ -55,7 +55,7 @@ class DetectionModelConfig:
     request_timeout: float = 150.0  # 请求超时时间（秒）
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class MediaConfig:
     """媒体配置（图像/视频/音频）"""
 

@@ -102,7 +102,7 @@ class DependencyType(str, Enum):
     VLM = "vlm"  # 需要视觉语言模型
 
 
-@dataclass(frozen=True)
+@dataclass(frozen=False)
 class ToolDependency:
     """工具依赖声明
 
