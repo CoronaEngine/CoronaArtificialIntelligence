@@ -54,7 +54,7 @@ def load_omni_tools(config: AIConfig) -> List[StructuredTool]:
     - 熔断与自动恢复
     - 多供应商适配
     """
-    omni_cfg = config.media.omni
+    omni_cfg = config.omni
     if not omni_cfg.enable:
         return []
 
