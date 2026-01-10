@@ -101,7 +101,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         dependencies=[
             ToolDependency(DependencyType.SCENE_SERVICE, required=True),
         ],
-        requires_config=True,
+        requires_config=False,
         source="tools.mcp",
     )
 
