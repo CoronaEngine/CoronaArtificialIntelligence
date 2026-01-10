@@ -660,7 +660,8 @@ def check_dependencies(
                     satisfied = bool(provider.api_key and provider.base_url)
 
         elif dep.type == DependencyType.CONFIG_MEDIA:
-            satisfied = config is not None and config.media is not None
+            # CONFIG_MEDIA已废弃，媒体配置已分散到各模块
+            satisfied = config is not None
 
         elif dep.type == DependencyType.CONFIG_TTS:
             satisfied = config is not None and config.tts is not None

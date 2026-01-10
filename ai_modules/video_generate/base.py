@@ -17,29 +17,55 @@ from ai_tools.common import (
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
 from ai_tools.helpers import request_time_diff
-from ai_tools.session_tracking import init_session, update_session_state, set_session_error
+from ai_tools.request_parser import (
+    extract_prompt_from_llm_content,
+    extract_images_from_request,
+)
+
+from ai_tools.session_tracking import (
+    init_session,
+    update_session_state,
+    set_session_error,
+)
 
 logger = logging.getLogger(__name__)
 
 
-def _extract_prompt_and_image(request_data: Dict[str, Any]) -> Dict[str, str]:
-    llm_content = request_data.get("llm_content", [])
-    prompt = ""
-    image_url = ""
-    if isinstance(llm_content, list) and llm_content:
-        parts = llm_content[0].get("part", [])
-        prompt_parts = [
-            p.get("content_text", "") for p in parts if p.get("content_type") == "text"
-        ]
-        image_parts = [
-            p.get("content_url", "") for p in parts if p.get("content_type") == "image"
-        ]
-        if prompt_parts:
-            prompt = " ".join(prompt_parts).strip()
-        if image_parts:
-            image_url = image_parts[0]
-    logger.debug(f"提取到 prompt: {prompt}, image_url: {image_url}")
-    return {"prompt": prompt, "image_url": image_url}
+def _clean_video_parts(original_parts: list[dict]) -> list[dict]:
+    """清洗视频生成返回的 parts
+
+    Args:
+        original_parts: 原始 parts 列表
+
+    Returns:
+        清洗后的 parts 列表
+    """
+    cleaned_parts = []
+    for part in original_parts:
+        cleaned_part = {
+            "content_type": part.get("content_type"),
+            "content_url": part.get("content_url"),
+            "content_text": part.get("content_text", ""),
+        }
+        # 保留 url_expire_time 字段
+        if "url_expire_time" in part:
+            cleaned_part["url_expire_time"] = part["url_expire_time"]
+        # 严格过滤 parameter
+        if "parameter" in part:
+            original_param = part["parameter"]
+            cleaned_param = {}
+            if "resolution" in original_param:
+                cleaned_param["resolution"] = original_param["resolution"]
+            if "duration" in original_param:
+                cleaned_param["duration"] = original_param["duration"]
+            if cleaned_param:
+                cleaned_part["parameter"] = cleaned_param
+
+        # 移除 None 值字段
+        cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
+        cleaned_parts.append(cleaned_part)
+    return cleaned_parts
+
 
 @register_entrance(handler_name="handle_video_generation")
 def handle_video_generation(payload: Any) -> str:
@@ -79,9 +105,9 @@ def _handle_video_generation_inner(
         update_session_state(session_id, "running")
 
         logger.debug(f"收到视频生成请求: {request_data}")
-        extracted = _extract_prompt_and_image(request_data)
-        prompt = extracted["prompt"]
-        image_url = extracted["image_url"]
+        prompt = extract_prompt_from_llm_content(request_data)
+        image_urls = extract_images_from_request(request_data)
+        image_url = image_urls[0] if image_urls else ""
 
         if not image_url:
             raise ValueError("缺少 prompt 或 image_url")
@@ -132,30 +158,7 @@ def _handle_video_generation_inner(
 
         # 提取并清洗 parts
         original_parts = llm_content[0].get("part", [])
-        cleaned_parts = []
-        for part in original_parts:
-            cleaned_part = {
-                "content_type": part.get("content_type"),
-                "content_url": part.get("content_url"),
-                "content_text": part.get("content_text", ""),
-            }
-            # 保留 url_expire_time 字段
-            if "url_expire_time" in part:
-                cleaned_part["url_expire_time"] = part["url_expire_time"]
-            # 严格过滤 parameter
-            if "parameter" in part:
-                original_param = part["parameter"]
-                cleaned_param = {}
-                if "resolution" in original_param:
-                    cleaned_param["resolution"] = original_param["resolution"]
-                if "duration" in original_param:
-                    cleaned_param["duration"] = original_param["duration"]
-                if cleaned_param:
-                    cleaned_part["parameter"] = cleaned_param
-
-            # 移除 None 值字段
-            cleaned_part = {k: v for k, v in cleaned_part.items() if v is not None}
-            cleaned_parts.append(cleaned_part)
+        cleaned_parts = _clean_video_parts(original_parts)
         logger.debug(f"清洗后的 parts: {cleaned_parts}")
 
         if not cleaned_parts:

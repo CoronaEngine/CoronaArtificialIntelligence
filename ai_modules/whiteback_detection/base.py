@@ -15,16 +15,42 @@ from ai_tools.common import (
     build_error_response,
     build_success_response,
     parse_tool_response,
-    session_context
+    session_context,
 )
 from ai_tools.concurrency import session_concurrency
+from ai_service.entrance import register_entrance
 from ai_tools.helpers import request_time_diff
-from ai_tools.session_tracking import init_session, update_session_state, set_session_error
+from ai_tools.request_parser import extract_images_from_request
+from ai_tools.session_tracking import (
+    init_session,
+    update_session_state,
+    set_session_error,
+)
 
 # 日志配置
 logger = logging.getLogger(__name__)
 
-from ai_service.entrance import register_entrance
+
+def _create_failed_detection_part(image_url: str, error_msg: str) -> Dict[str, Any]:
+    """创建失败的白底图检测结果
+
+    Args:
+        image_url: 图片 URL
+        error_msg: 错误信息
+
+    Returns:
+        失败的检测结果 part
+    """
+    return {
+        "content_type": "whiteback_detect",
+        "content_text": "False",
+        "content_url": image_url,
+        "parameter": {
+            "white_base_value": 0,
+            "error": error_msg,
+        },
+    }
+
 
 @register_entrance(handler_name="handle_whiteback_detection")
 def handle_whiteback_detection(payload: Any) -> str:
@@ -80,7 +106,7 @@ def _handle_whiteback_detection_inner(
         logger.debug(f"收到白底图检测请求: {request_data}")
 
         # 提取图片 URL 列表
-        image_urls = _extract_image_urls(request_data.get("llm_content", []))
+        image_urls = extract_images_from_request(request_data)
         if not image_urls:
             raise ValueError(
                 "缺少待检测的图片，请在 llm_content 中提供 content_type 为 'image' 的图片 URL"
@@ -97,87 +123,56 @@ def _handle_whiteback_detection_inner(
 
         detect_tool = tools[0]
 
-        # 对每张图片进行检测
+        # 批量检测所有图片（一次 API 调用）
         all_parts: List[Dict[str, Any]] = []
 
-        with session_context(session_id) as sid:
-            logger.debug(f"进入 session_context: {sid}")
+        try:
+            with session_context(session_id) as sid:
+                logger.debug(f"进入 session_context: {sid}")
+                # 一次性传入所有图片 URL 进行批量检测
+                result_json = detect_tool.func(image_urls=image_urls)
+                session_id = sid
 
-            for image_url in image_urls:
-                try:
-                    logger.info(f"检测图片: {image_url}")
+            logger.debug(f"detect_tool 返回: {result_json}")
 
-                    # 调用检测工具
-                    result_json = detect_tool.func(image_url=image_url)
-                    logger.debug(f"detect_tool 返回: {result_json}")
+            # 解析 Tool 返回的 Envelope JSON
+            tool_envelope = parse_tool_response(result_json)
+            logger.debug(f"解析 tool_envelope: {tool_envelope}")
 
-                    # 解析 Tool 返回的 Envelope JSON
-                    tool_envelope = parse_tool_response(result_json)
-                    logger.debug(f"解析 tool_envelope: {tool_envelope}")
+            # 检查错误
+            if tool_envelope.get("error_code", 0) != 0:
+                error_msg = tool_envelope.get("status_info", "未知错误")
+                logger.error(f"批量检测失败: {error_msg}")
 
-                    # 检查错误
-                    if tool_envelope.get("error_code", 0) != 0:
-                        error_msg = tool_envelope.get("status_info", "未知错误")
-                        logger.error(f"检测图片 {image_url} 失败: {error_msg}")
-
-                        # 添加失败结果
-                        all_parts.append(
-                            {
-                                "content_type": "whiteback_detect",
-                                "content_text": "False",
-                                "content_url": image_url,
-                                "parameter": {
-                                    "white_base_value": 0,
-                                    "error": error_msg,
-                                },
-                            }
-                        )
-                        continue
-
-                    # 提取 llm_content 中的 parts
-                    llm_content = tool_envelope.get("llm_content", [])
-                    if llm_content:
-                        parts = llm_content[0].get("part", [])
-                        all_parts.extend(parts)
-
-                        # 日志记录
-                        if parts:
-                            part = parts[0]
-                            logger.info(
-                                f"检测完成: {part.get('content_text')}, "
-                                f"white_base_value: {part.get('parameter', {}).get('white_base_value')}"
-                            )
-                    else:
-                        logger.error(f"检测图片 {image_url} 未返回有效内容")
-                        all_parts.append(
-                            {
-                                "content_type": "whiteback_detect",
-                                "content_text": "False",
-                                "content_url": image_url,
-                                "parameter": {
-                                    "white_base_value": 0,
-                                    "error": "未返回有效内容",
-                                },
-                            }
-                        )
-
-                except Exception as e:
-                    logger.exception(f"检测图片 {image_url} 异常: {e}")
+                # 为所有图片添加失败结果
+                for image_url in image_urls:
                     all_parts.append(
-                        {
-                            "content_type": "whiteback_detect",
-                            "content_text": "False",
-                            "content_url": image_url,
-                            "parameter": {
-                                "white_base_value": 0,
-                                "error": str(e),
-                            },
-                        }
+                        _create_failed_detection_part(image_url, error_msg)
                     )
+            else:
+                # 提取 llm_content 中的 parts
+                llm_content = tool_envelope.get("llm_content", [])
+                if llm_content:
+                    parts = llm_content[0].get("part", [])
+                    all_parts.extend(parts)
 
-            session_id = sid
+                    # 日志记录
+                    logger.info(f"批量检测完成: 成功 {len(parts)} 张图片")
+                else:
+                    logger.error("批量检测未返回有效内容")
+                    # 为所有图片添加失败结果
+                    for image_url in image_urls:
+                        all_parts.append(
+                            _create_failed_detection_part(image_url, "未返回有效内容")
+                        )
 
-        logger.info(f"检测完成，共检测 {len(all_parts)} 张图片")
+        except Exception as e:
+            logger.exception(f"批量检测异常: {e}")
+            # 为所有图片添加失败结果
+            for image_url in image_urls:
+                all_parts.append(_create_failed_detection_part(image_url, str(e)))
+
+        logger.info(f"检测完成，共返回 {len(all_parts)} 个结果")
 
         update_session_state(session_id, "completed")
 
@@ -198,40 +193,3 @@ def _handle_whiteback_detection_inner(
             metadata=metadata,
             exc=exc,
         )
-
-
-def _extract_image_urls(llm_content: List[Dict[str, Any]]) -> List[str]:
-    """
-    从 llm_content 中提取图片 URL。
-
-    支持两种格式：
-    1. 嵌套格式（优先）：llm_content[].part[].content_url
-    2. 扁平格式：llm_content[].content_url
-
-    Args:
-        llm_content: llm_content 数组
-
-    Returns:
-        图片 URL 列表
-    """
-    image_urls = []
-
-    for item in llm_content:
-        # 尝试嵌套格式（优先）：llm_content[].part[].content_url
-        if "part" in item and isinstance(item["part"], list):
-            for part in item["part"]:
-                content_type = part.get("content_type", "")
-                content_url = part.get("content_url", "")
-
-                if content_type == "image" and content_url:
-                    image_urls.append(content_url)
-
-        # 尝试扁平格式：llm_content[].content_url
-        else:
-            content_type = item.get("content_type", "")
-            content_url = item.get("content_url", "")
-
-            if content_type == "image" and content_url:
-                image_urls.append(content_url)
-
-    return image_urls

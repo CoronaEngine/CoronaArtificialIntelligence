@@ -5,11 +5,24 @@
 import os
 from typing import Any, Mapping
 
-from ai_modules.speech_generate.configs.dataclasses import TTSConfig
+from ai_modules.speech_generate.configs.dataclasses import TTSConfig, AudioConfig
 
 from ai_service.entrance import ai_entrance
 
-@ai_entrance.collector.register_loader('tts')
+
+@ai_entrance.collector.register_loader("audio")
+def _load_audio_config(raw: Mapping[str, Any] | None) -> AudioConfig:
+    """加载音频配置"""
+    if not isinstance(raw, Mapping):
+        return AudioConfig()
+
+    return AudioConfig(
+        sample_rate=int(raw.get("sample_rate", 24000)),
+        bitrate=int(raw.get("bitrate", 160)),
+    )
+
+
+@ai_entrance.collector.register_loader("tts")
 def _load_tts_config(raw: Mapping[str, Any] | None) -> TTSConfig:
     """加载 TTS 配置"""
     if not isinstance(raw, Mapping):

@@ -46,7 +46,7 @@ def _get_legacy_image_client():
     from ai_modules.image_generate.tools.client_image import LingyaImageClient
 
     config = get_ai_config()
-    image_cfg = config.media.image
+    image_cfg = config.image
 
     if not image_cfg.enable or not image_cfg.provider:
         return None
@@ -68,7 +68,7 @@ def _get_legacy_video_client():
     from ai_modules.video_generate.tools.client_video import DashScopeVideoClient
 
     config = get_ai_config()
-    video_cfg = config.media.video
+    video_cfg = config.video
 
     if not video_cfg.enable or not video_cfg.provider:
         return None
@@ -170,7 +170,7 @@ def _get_legacy_omni_client():
     from openai import OpenAI
 
     config = get_ai_config()
-    omni_cfg = config.media.omni
+    omni_cfg = config.omni
 
     if not omni_cfg.enable or not omni_cfg.provider or not omni_cfg.model:
         return None
@@ -201,7 +201,7 @@ def _get_legacy_detection_client():
     from openai import OpenAI
 
     config = get_ai_config()
-    detection_cfg = config.media.detection
+    detection_cfg = config.detection
 
     if not detection_cfg.enable or not detection_cfg.provider or not detection_cfg.model:
         return None

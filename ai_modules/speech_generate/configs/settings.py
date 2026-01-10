@@ -14,6 +14,15 @@ from typing import Any, Dict
 
 from ai_service.entrance import ai_entrance
 
+
+@ai_entrance.collector.register_setting("audio")
+def AUDIO_SETTINGS() -> Dict[str, Any]:
+    return {
+        "sample_rate": 24000,
+        "bitrate": 160,
+    }
+
+
 @ai_entrance.collector.register_setting("tts")
 def TTS_SETTINGS() -> Dict[str, Any]:
     return {
@@ -22,4 +31,3 @@ def TTS_SETTINGS() -> Dict[str, Any]:
         "appid": "YOUR_APPID_HERE",
         "token": "YOUR_TOKEN_HERE",
     }
-

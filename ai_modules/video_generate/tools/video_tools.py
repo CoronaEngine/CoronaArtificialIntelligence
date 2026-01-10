@@ -33,7 +33,6 @@ from ai_models.base_pool import (
     VideoRequest,
     MediaResult,
 )
-from ai_modules.media.tools.media_tools import _is_media_tool_enabled
 
 logger = logging.getLogger(__name__)
 
@@ -72,10 +71,6 @@ def load_video_tools(config: AIConfig) -> List[StructuredTool]:
     - 熔断与自动恢复
     - 多供应商适配
     """
-    video_cfg = config.media.video
-    if not _is_media_tool_enabled(video_cfg, config):
-        return []
-
     # 获取池注册表（自动检测账号池或降级模式）
     pool_registry = get_pool_registry()
     if pool_registry.get_pool(MediaCategory.VIDEO) is None:
@@ -222,8 +217,6 @@ def load_video_tools(config: AIConfig) -> List[StructuredTool]:
     )
 
     return [tool]
-
-
 
 
 __all__ = ["load_video_tools"]
