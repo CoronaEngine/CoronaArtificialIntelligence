@@ -194,6 +194,21 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         source="tools.omni.omni_tools",
     )
 
+# -----------------------------------------------------------------------
+# 3D 生成工具（Rodin）
+# -----------------------------------------------------------------------
+    from ai_modules.three_d_generate.tools.model_tools import load_3d_tools
+
+    registry.register_loader(
+        loader=load_3d_tools,
+        category=ToolCategory.SCENE,
+        dependencies=[
+            # ToolDependency(DependencyType.CONFIG_PROVIDER, provider="rodin"),
+        ],
+        requires_config=True,
+        source="tools.model_tools",
+    )
+
 
 # ===========================================================================
 # 公开 API
