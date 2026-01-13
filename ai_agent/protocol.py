@@ -75,7 +75,7 @@ def wrap_part_as_assistant_message(part: Dict[str, Any], session_id: str) -> AIM
         AIMessage: 包含媒体信息的助手消息
     """
     content_type = part.get("content_type", "unknown")
-    content_url = part.get("content_url", "")
+    content_url = part.get("content_file", "")
     content_text = part.get("content_text", "")
 
     # 构建简洁的文本描述
