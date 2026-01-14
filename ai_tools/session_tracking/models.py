@@ -259,10 +259,8 @@ class SessionCache:
         result = {
             "session_id": self.session_id,
             "state": self.state,
-            "created_at": self.created_at,
-            "created_at_iso": self.created_at_iso,
-            "updated_at": self.updated_at,
-            "updated_at_iso": self.updated_at_iso,
+            "created_at": self.created_at_iso,
+            "updated_at": self.updated_at_iso,
             "input_type": self.input_type,
             "input_parameters": self.input_parameters,
             "progress": self.progress.to_dict(),

@@ -384,6 +384,7 @@ def _handle_integrated_entrance_stream_inner(
                     "content_type": c_type,
                     "content_url": f"fileid://{file_id}",
                     "content_text": part.get("content_text", ""),
+                    "content_file": part.get("content_url", ""),
                 }
                 if "parameter" in part:
                     clean_part["parameter"] = part["parameter"]

@@ -173,7 +173,9 @@ def _build_transform_tool(scene_service: "SceneApplicationService") -> Structure
     )
 
 
-def load_scene_tools(scene_service: "SceneApplicationService") -> List[StructuredTool]:
+def load_scene_tools() -> List[StructuredTool]:
+    from Backend.utils import get_scene_service
+    scene_service = get_scene_service()
     return [
         _build_scene_query_tool(scene_service),
         _build_transform_tool(scene_service),

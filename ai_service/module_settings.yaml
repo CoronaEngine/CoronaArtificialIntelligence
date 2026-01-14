@@ -52,6 +52,10 @@ modules:
     enabled: true
     description: "音乐生成"
 
+  - name: three_d_generate
+    enabled: true
+    description: "3D模型生成"
+
   # 检测模块
   - name: detection
     enabled: true
