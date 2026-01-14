@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from langchain_core.tools import StructuredTool
+from langchain_core.runnables import RunnableConfig
 from pydantic import BaseModel, Field
 
 from ai_config.ai_config import AIConfig
@@ -78,6 +79,7 @@ def load_image_tools(config: AIConfig) -> List[StructuredTool]:
 
     def _generate(
         prompt: str,
+        config: RunnableConfig,
         resolution: str = "1:1",
         image_urls: List[str] | None = None,
         image_size: str = "2K",
@@ -90,7 +92,7 @@ def load_image_tools(config: AIConfig) -> List[StructuredTool]:
         )
 
         # 获取当前 session_id
-        session_id = get_current_session()
+        session_id = config.get("configurable").get("session_id", None) or get_current_session()
 
         # 构建标准请求
         request = ImageRequest(
