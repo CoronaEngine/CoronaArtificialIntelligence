@@ -15,7 +15,6 @@ from ai_tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
-    session_context,
     parse_tool_response,
 )
 from ai_tools.concurrency import session_concurrency
@@ -108,14 +107,13 @@ def _handle_detection_inner(
             raise RuntimeError("目标检测功能未启用或配置不完整")
 
         detection_tool = tools[0]
-
-        # 调用检测工具
-        with session_context(session_id):
-            logger.debug(f"进入 session_context: {session_id}")
-            result_json = detection_tool.func(
-                image_url=image_url,
-                target_description=target_description,
-            )
+        result_json = detection_tool.invoke(
+            {
+                "image_url": image_url,
+                "target_description": target_description,
+            },
+            config={"session_id": session_id},
+        )
         logger.debug(f"detection_tool 返回: {result_json}")
 
         # 解析 Tool 返回的 Envelope JSON
