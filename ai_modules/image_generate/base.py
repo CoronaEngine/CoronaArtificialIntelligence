@@ -10,7 +10,6 @@ from ai_tools.common import (
     ensure_dict,
     build_error_response,
     build_success_response,
-    session_context,
     extract_parameter,
     parse_tool_response,
 )
@@ -162,15 +161,16 @@ def _handle_image_generation_inner(
             image_size = "2K"
         logger.debug(f"使用 image_size: {image_size}")
 
-        with session_context(session_id) as sid:
-            logger.debug(f"进入 session_context: {sid}")
-            result_json = image_tool.func(
-                prompt=prompt,
-                resolution=resolution,
-                image_urls=image_urls if image_urls else None,
-                image_size=image_size,
-            )
-            session_id = sid  # 使用实际上下文 session
+        result_json = image_tool.invoke(
+            {
+                "prompt": prompt,
+                "resolution": resolution,
+                "image_urls": image_urls if image_urls else None,
+                "image_size": image_size,
+            },
+            config={"session_id": session_id},
+        )
+
         logger.debug(f"image_tool 返回: {result_json}")
 
         # 解析 Tool 返回的 Envelope JSON

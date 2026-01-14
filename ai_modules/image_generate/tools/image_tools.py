@@ -47,7 +47,7 @@ class ImageGenerationInput(BaseModel):
         default="2K",
         description=IMAGE_PROMPTS.fields["image_size"],
     )
-    image_urls: List[str] = Field(
+    image_urls: List[str] | None = Field(
         default_factory=list,
         description=IMAGE_PROMPTS.fields["image_urls"],
     )
