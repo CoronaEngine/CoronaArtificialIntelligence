@@ -6,8 +6,13 @@
 
 from __future__ import annotations
 
+import base64
 import logging
+import re
+from pathlib import Path
 from typing import Optional
+
+import requests
 
 from ai_media_resource.adapter_base import (
     StorageAdapter,
@@ -27,15 +32,8 @@ class LocalStorageAdapter(StorageAdapter):
     """
 
     def __init__(self):
-        self._store = None
-
-    def _get_store(self):
-        """延迟初始化 MediaStore"""
-        if self._store is None:
-            from Backend.local_storage.utils import get_media_store
-
-            self._store = get_media_store()
-        return self._store
+        self.save_path = Path(__file__).parent.parent / "local_storage"
+        self.save_path.mkdir(exist_ok=True)
 
     def save_from_url(
         self,
@@ -46,15 +44,27 @@ class LocalStorageAdapter(StorageAdapter):
         url_expire_time: Optional[int] = None,
     ) -> StorageResult:
         """下载资源到本地，返回 file:// URL"""
-        store = self._get_store()
-        local_url = store.save_resource_from_url(
-            session_id=session_id,
-            url=cloud_url,
-            resource_type=resource_type,
-            original_name=original_name,
-        )
-        logger.debug(f"资源已下载到本地: {cloud_url} -> {local_url}")
-        return StorageResult(url=local_url, url_expire_time=None)
+
+
+
+        local_path = self.save_path / original_name
+
+        # 3. 下载文件
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+        }
+
+        response = requests.get(cloud_url, headers=headers, stream=True, timeout=30)
+        response.raise_for_status()
+
+        with open(local_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
+
+        file_url = f"file://{local_path.absolute()}"
+        logger.debug(f"资源已下载到本地: {cloud_url} -> {file_url}")
+        return StorageResult(url=str(file_url), url_expire_time=None)
 
     def save_from_base64(
         self,
@@ -66,15 +76,71 @@ class LocalStorageAdapter(StorageAdapter):
     ) -> StorageResult:
         """将 base64 数据保存到本地，返回 file:// URL"""
         normalized_data = normalize_to_data_uri(data_uri, resource_type)
-        store = self._get_store()
-        local_url = store.save_resource_from_base64(
-            session_id=session_id,
-            data_uri=normalized_data,
-            resource_type=resource_type,
-            filename_prefix=filename_prefix,
-        )
-        logger.debug(f"Base64 数据已保存到本地: {local_url}")
-        return StorageResult(url=local_url, url_expire_time=None)
+
+        header, data = normalized_data.split(',', 1)
+
+        # 提取MIME类型
+        mime_match = re.match(r'data:(.*?);base64', header)
+        if not mime_match:
+            raise ValueError("无法解析data URI的MIME类型")
+
+        mime_type = mime_match.group(1)
+
+        # 3. 生成文件名
+        if resource_type:
+            # 根据资源类型确定扩展名
+            if resource_type.startswith('image'):
+                if 'jpeg' in resource_type or 'jpg' in resource_type:
+                    ext = '.jpg'
+                elif 'png' in resource_type:
+                    ext = '.png'
+                elif 'gif' in resource_type:
+                    ext = '.gif'
+                else:
+                    ext = '.jpg'
+            elif resource_type.startswith('video'):
+                ext = '.mp4'
+            elif resource_type.startswith('audio'):
+                ext = '.mp3'
+            elif resource_type.startswith('application/pdf'):
+                ext = '.pdf'
+            else:
+                ext = '.bin'
+        else:
+            # 从MIME类型推断扩展名
+            if 'jpeg' in mime_type or 'jpg' in mime_type:
+                ext = '.jpg'
+            elif 'png' in mime_type:
+                ext = '.png'
+            elif 'gif' in mime_type:
+                ext = '.gif'
+            elif 'pdf' in mime_type:
+                ext = '.pdf'
+            else:
+                ext = '.bin'
+
+
+        filename = f"{filename_prefix}{ext}"
+        # 4. 构建本地路径
+        local_path = self.save_path / filename
+
+        # 5. 解码并保存base64数据
+        try:
+            # 解码base64数据
+            binary_data = base64.b64decode(data)
+
+            # 保存文件
+            with open(local_path, 'wb') as f:
+                f.write(binary_data)
+
+        except base64.binascii.Error:
+            raise ValueError("Base64数据解码失败")
+
+        # 6. 返回结果
+        file_url = f"file://{local_path.absolute()}"
+
+        logger.debug(f"Base64 数据已保存到本地: {file_url}")
+        return StorageResult(url=file_url, url_expire_time=None)
 
 
 __all__ = ["LocalStorageAdapter"]
