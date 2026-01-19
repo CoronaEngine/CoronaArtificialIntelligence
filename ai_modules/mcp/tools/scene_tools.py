@@ -45,7 +45,7 @@ class TransformModelInput(BaseModel):
     )
 
 
-def _build_scene_query_tool(scene_service: "SceneApplicationService") -> StructuredTool:
+def _build_scene_query_tool(scene_service) -> StructuredTool:
     def _query_scene(
         *,
         scene_name: str = DEFAULT_SCENE_NAME,
@@ -105,7 +105,7 @@ def _build_scene_query_tool(scene_service: "SceneApplicationService") -> Structu
     )
 
 
-def _build_transform_tool(scene_service: "SceneApplicationService") -> StructuredTool:
+def _build_transform_tool(scene_service) -> StructuredTool:
     def _transform_model(
         *,
         scene_name: str = DEFAULT_SCENE_NAME,
@@ -174,8 +174,7 @@ def _build_transform_tool(scene_service: "SceneApplicationService") -> Structure
 
 
 def load_scene_tools() -> List[StructuredTool]:
-    from Backend.utils import get_scene_service
-    scene_service = get_scene_service()
+    from Backend.utils import scene_service
     return [
         _build_scene_query_tool(scene_service),
         _build_transform_tool(scene_service),
