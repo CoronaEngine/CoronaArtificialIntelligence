@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import base64
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Optional
@@ -45,9 +46,37 @@ class LocalStorageAdapter(StorageAdapter):
     ) -> StorageResult:
         """下载资源到本地，返回 file:// URL"""
 
+        if original_name:
+            # 清理文件名，移除非法字符
+            safe_name = re.sub(r'[^\w\-_.]', '_', original_name)
+            name, ext = os.path.splitext(safe_name)
 
+            # 如果没有扩展名，根据资源类型添加
+            if not ext and resource_type:
+                if resource_type.startswith('image'):
+                    ext = '.jpg' if 'jpeg' in resource_type else '.png'
+                elif resource_type.startswith('video'):
+                    ext = '.mp4'
+                elif resource_type.startswith('audio'):
+                    ext = '.mp3'
+                else:
+                    ext = '.bin'
 
-        local_path = self.save_path / original_name
+            filename = f"{name}_{session_id}{ext}"
+        else:
+            # 生成随机文件名
+            if resource_type.startswith('image'):
+                ext = '.jpg' if 'jpeg' in resource_type else '.png'
+            elif resource_type.startswith('video'):
+                ext = '.mp4'
+            elif resource_type.startswith('audio'):
+                ext = '.mp3'
+            else:
+                ext = '.bin'
+
+            filename = f"resource_{session_id}{ext}"
+
+        local_path = self.save_path / filename
 
         # 3. 下载文件
         headers = {
