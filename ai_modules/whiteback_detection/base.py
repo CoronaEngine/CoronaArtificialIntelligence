@@ -15,7 +15,6 @@ from ai_tools.common import (
     build_error_response,
     build_success_response,
     parse_tool_response,
-    session_context,
 )
 from ai_tools.concurrency import session_concurrency
 from ai_service.entrance import register_entrance
@@ -127,11 +126,10 @@ def _handle_whiteback_detection_inner(
         all_parts: List[Dict[str, Any]] = []
 
         try:
-            with session_context(session_id) as sid:
-                logger.debug(f"进入 session_context: {sid}")
-                # 一次性传入所有图片 URL 进行批量检测
-                result_json = detect_tool.func(image_urls=image_urls)
-                session_id = sid
+            # 一次性传入所有图片 URL 进行批量检测
+            result_json = detect_tool.invoke(
+                {"image_urls": image_urls}, config={"session_id": session_id}
+            )
 
             logger.debug(f"detect_tool 返回: {result_json}")
 

@@ -79,9 +79,7 @@ class SessionCacheManager:
         cache_dict = cache.to_dict()
         session_id = cache.session_id
         state = cache.state
-        created_at = cache.created_at
         created_at_iso = cache.created_at_iso
-        updated_at = cache.updated_at
         updated_at_iso = cache.updated_at_iso
         input_type = cache.input_type
         error_message = cache.error_message
@@ -91,13 +89,11 @@ class SessionCacheManager:
         def _sync():
             try:
                 store = _get_redis_session_store()
-                # 1. 保存基础状态（包含所有时间字段）
+                # 1. 保存基础状态（使用 ISO 格式）
                 store.save_session_state(
                     session_id=session_id,
                     state=state,
-                    created_at=created_at,
                     created_at_iso=created_at_iso,
-                    updated_at=updated_at,
                     updated_at_iso=updated_at_iso,
                     input_type=input_type,
                     error_message=error_message,

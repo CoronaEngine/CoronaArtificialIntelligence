@@ -13,7 +13,11 @@ import logging
 from typing import Any, Dict
 
 from ai_tools.common import build_error_response
-from ai_tools.session_tracking import init_session,update_session_state,set_session_error
+from ai_tools.session_tracking import (
+    init_session,
+    update_session_state,
+    set_session_error,
+)
 from ai_workflow.adapter import (
     extract_function_id,
     parse_request,
@@ -101,7 +105,6 @@ def execute_workflow(
                 },
             )
             update_session_state(session_id, "running")
-
             # 执行工作流
             final_state = workflow.invoke(initial_state)
 
