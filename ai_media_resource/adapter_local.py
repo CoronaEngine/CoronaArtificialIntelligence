@@ -91,7 +91,7 @@ class LocalStorageAdapter(StorageAdapter):
                 if chunk:
                     f.write(chunk)
 
-        file_url = f"file://{local_path.absolute()}"
+        file_url = f"file://{local_path}"
         logger.debug(f"资源已下载到本地: {cloud_url} -> {file_url}")
         return StorageResult(url=str(file_url), url_expire_time=None)
 
@@ -166,7 +166,7 @@ class LocalStorageAdapter(StorageAdapter):
             raise ValueError("Base64数据解码失败")
 
         # 6. 返回结果
-        file_url = f"file://{local_path.absolute()}"
+        file_url = f"file://{local_path}"
 
         logger.debug(f"Base64 数据已保存到本地: {file_url}")
         return StorageResult(url=file_url, url_expire_time=None)
