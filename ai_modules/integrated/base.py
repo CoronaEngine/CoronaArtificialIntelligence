@@ -27,13 +27,6 @@ from ai_tools.helpers import request_time_diff
 
 logger = logging.getLogger(__name__)
 
-def _strip_fileid_prefix(value: str) -> str:
-    """fileid://xxxx 或 fileid:///xxxx -> xxxx"""
-    s = (value or "").strip()
-    if s.startswith("fileid://"):
-        return s[len("fileid://"):].lstrip("/")
-    return s
-
 # 流式输出配置：每个 Assistant 消息最多累积的工具结果数量
 # 超过此数量后，会自动创建新的 Assistant 消息来承载后续工具结果
 MAX_TOOLS_PER_ASSISTANT = 3
@@ -61,7 +54,10 @@ def _parse_tool_parts(content: str) -> List[Dict[str, Any]]:
         if clean_content.startswith("```"):
             if clean_content.startswith("```json"):
                 clean_content = clean_content[7:]
-            clean_content = clean_content.strip("`").strip()
+            else:
+                clean_content = clean_content[3:]
+            if clean_content.endswith("```"):
+                clean_content = clean_content[:-3]
 
         # 2. 解析 JSON
         data = json.loads(clean_content.strip())
@@ -131,7 +127,7 @@ def handle_integrated_entrance(payload: Any) -> str:
     request_time_diff(payload)
     request_data: Dict[str, Any] = ensure_dict(payload)
     metadata = request_data.get("metadata", {})
-    session_id = request_data.get("session_id") or request_data.get("sessionId") or "default"
+    session_id = request_data.get("session_id", "default")
     cfg = get_ai_config()
 
     # 使用统一的并发控制
@@ -143,52 +139,7 @@ def handle_integrated_entrance(payload: Any) -> str:
                 metadata=metadata,
                 exc=RuntimeError("并发繁忙，请稍后重试"),
             )
-        
-        try:
-            response = process_chat_request(request_data)
-            return response
-        except Exception as exc:
-            logger.error(f"integrated 请求处理异常: {exc}", exc_info=True)
-            return build_error_response(
-                interface_type="integrated",
-                session_id=session_id,
-                metadata=metadata,
-                exc=exc,
-            )
-            
-    return _handle_integrated_entrance_inner(request_data, session_id, metadata)
-
-@register_entrance(handler_name="handle_integrated_entrance_stream")
-def handle_integrated_entrance_stream(payload: Any):
-    """integrated 入口（流式）"""
-    request_time_diff(payload)
-    request_data: Dict[str, Any] = ensure_dict(payload)
-    metadata = request_data.get("metadata", {}) or {}
-    cfg = get_ai_config()
-
-    session_id = request_data.get("session_id") or request_data.get("sessionId") or "default"
-
-    with session_concurrency(session_id, cfg) as acquired:
-        if not acquired:
-            yield build_error_response(
-                interface_type="integrated",
-                session_id=session_id,
-                metadata=metadata,
-                exc=RuntimeError("并发繁忙，请稍后重试"),
-            )
-            return
-
-        try:
-            for chunk in _handle_integrated_entrance_stream_inner(request_data, session_id, metadata, cfg):
-                yield chunk
-        except Exception as exc:
-            logger.error(f"integrated stream 请求处理异常: {exc}", exc_info=True)
-            yield build_error_response(
-                interface_type="integrated",
-                session_id=session_id,
-                metadata=metadata,
-                exc=exc,
-            )
+        return _handle_integrated_entrance_inner(request_data, session_id, metadata)
 
 
 def _handle_integrated_entrance_inner(
@@ -437,11 +388,6 @@ def _handle_integrated_entrance_stream_inner(
                 }
                 if "parameter" in part:
                     clean_part["parameter"] = part["parameter"]
-                    
-                try:
-                    logger.info("[upload_debug] clean_part:\n%s", json.dumps(clean_part, ensure_ascii=False, indent=2))
-                except Exception:
-                    logger.info("[upload_debug] clean_part (non-json): %s", clean_part)
 
                 assistant_msg = wrap_part_as_assistant_message(clean_part, session_id)
                 artificial_assistant_messages.append(assistant_msg)
