@@ -10,6 +10,7 @@ import base64
 import logging
 import os
 import re
+import uuid
 from pathlib import Path
 from typing import Optional
 
@@ -45,7 +46,7 @@ class LocalStorageAdapter(StorageAdapter):
         url_expire_time: Optional[int] = None,
     ) -> StorageResult:
         """下载资源到本地，返回 file:// URL"""
-
+        _id = uuid.uuid1()
         if original_name:
             # 清理文件名，移除非法字符
             safe_name = re.sub(r'[^\w\-_.]', '_', original_name)
@@ -62,7 +63,7 @@ class LocalStorageAdapter(StorageAdapter):
                 else:
                     ext = '.bin'
 
-            filename = f"{name}_{session_id}{ext}"
+            filename = f"{name}_{session_id}_{_id}{ext}"
         else:
             # 生成随机文件名
             if resource_type.startswith('image'):
@@ -74,7 +75,7 @@ class LocalStorageAdapter(StorageAdapter):
             else:
                 ext = '.bin'
 
-            filename = f"resource_{session_id}{ext}"
+            filename = f"resource_{session_id}_{_id}{ext}"
 
         local_path = self.save_path / filename
 
@@ -92,7 +93,7 @@ class LocalStorageAdapter(StorageAdapter):
                     f.write(chunk)
 
         file_url = f"file://{local_path}"
-        logger.debug(f"资源已下载到本地: {cloud_url} -> {file_url}")
+        logger.info(f"资源已下载到本地: {cloud_url} -> {file_url}")
         return StorageResult(url=str(file_url), url_expire_time=None)
 
     def save_from_base64(
@@ -148,8 +149,8 @@ class LocalStorageAdapter(StorageAdapter):
             else:
                 ext = '.bin'
 
-
-        filename = f"{filename_prefix}{ext}"
+        _id = uuid.uuid1()
+        filename = f"{filename_prefix}_{_id}{ext}"
         # 4. 构建本地路径
         local_path = self.save_path / filename
 
@@ -168,7 +169,7 @@ class LocalStorageAdapter(StorageAdapter):
         # 6. 返回结果
         file_url = f"file://{local_path}"
 
-        logger.debug(f"Base64 数据已保存到本地: {file_url}")
+        logger.info(f"Base64 数据已保存到本地: {file_url}")
         return StorageResult(url=file_url, url_expire_time=None)
 
 
