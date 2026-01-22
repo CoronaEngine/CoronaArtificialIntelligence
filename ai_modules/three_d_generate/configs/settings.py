@@ -9,7 +9,7 @@ from ai_service.entrance import ai_entrance
 def RODIN_3D_SETTINGS() -> Dict[str, Any]:
     return {
         "base_url": "https://api.hyper3d.com",
-        "api_key": "ew8ZMLzbHDCobj0OEaEbvkQcTHW2ecrHQFFdInEZyeckQc3jS9bQQBNumpXyCMSk",
+        "api_key": "your key",
        
         "generate_path": "/api/v2/rodin",
         "download_path": "/api/v2/download",

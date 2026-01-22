@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import logging
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
 
 from ai_config.ai_config import AIConfig
+from ai_media_resource import get_media_registry
 from ai_tools.response_adapter import build_part, build_success_result, build_error_result
 
 from ai_modules.three_d_generate.tools.client_3d import Rodin3DClient
@@ -49,7 +51,6 @@ def load_3d_tools(config: AIConfig) -> List[StructuredTool]:
 
     base_url = threed_config.base_url.strip()
     api_key = threed_config.api_key.strip()
-
     if not base_url:
         raise RuntimeError("Rodin base_url 缺失：请在 settings.rodin_3d.base_url 配置")
     if not api_key:
@@ -68,6 +69,8 @@ def load_3d_tools(config: AIConfig) -> List[StructuredTool]:
     poll_interval = threed_config.poll_interval
     poll_timeout = threed_config.poll_timeout
 
+    media_registry = get_media_registry()
+
     def _rodin_generate_3d(
         mode: str = "image_to_3d",
         images: Optional[List[str]] = None,
@@ -82,9 +85,17 @@ def load_3d_tools(config: AIConfig) -> List[StructuredTool]:
     ) -> str:
         try:
             mode = (mode or "").strip()
-            images = images or None
+            image_list = []
+            for image in images:
+                if image.startswith("fileid://"):
+                    media = media_registry.get_by_file_id(image[9:].strip())
+                    image_list.append(media.content_url)
+                else:
+                    image_list.append(image)
+
+
+            # images = images or None
             prompt = prompt.strip() if isinstance(prompt, str) else None
-            print(images)
             if mode not in {"image_to_3d", "text_to_3d"}:
                 raise ValueError("mode 必须是 image_to_3d 或 text_to_3d")
 
@@ -108,7 +119,7 @@ def load_3d_tools(config: AIConfig) -> List[StructuredTool]:
                 generate_path=generate_path,
                 status_path=status_path,
                 download_path=download_path,
-                images=images if mode == "image_to_3d" else None,
+                images=image_list if mode == "image_to_3d" else None,
                 form_fields=form_fields,
                 poll_interval=poll_interval,
                 poll_timeout=poll_timeout,

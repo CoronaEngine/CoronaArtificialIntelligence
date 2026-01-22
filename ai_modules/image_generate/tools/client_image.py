@@ -151,8 +151,7 @@ class LingyaImageClient(BaseAPIClient):
             # 如果是 fileid:// URL，解析为真实 URL
             if source.startswith("fileid://"):
                 from ai_media_resource import get_media_registry
-                file_id = source[len("fileid://"):].lstrip("/")
-                resolved_url = get_media_registry().resolve(file_id, timeout=150.0)
+                file_id = source[9:].lstrip("/")
                 try:
                     resolved_url = get_media_registry().resolve(file_id, timeout=150.0)
                     # 递归处理解析后的 URL（可能是 file:// 或 http://）

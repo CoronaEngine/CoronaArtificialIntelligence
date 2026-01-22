@@ -420,15 +420,15 @@ class ToolRegistry:
             count = 0
 
             # 如果没有传入 config，尝试获取
-            if config is None:
-                try:
-                    from ai_config.ai_config import (
-                        get_ai_config,
-                    )
+            # if config is None:
+            try:
+                from ai_config.ai_config import (
+                    get_ai_config,
+                )
 
-                    config = get_ai_config()
-                except Exception as e:
-                    logger.warning(f"Failed to get AIConfig: {e}")
+                config = get_ai_config()
+            except Exception as e:
+                logger.warning(f"Failed to get AIConfig: {e}")
 
             # 1. 执行已注册的 loaders
             for spec in self._loaders:
