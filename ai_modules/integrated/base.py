@@ -81,7 +81,7 @@ def _parse_tool_parts(content: str) -> List[Dict[str, Any]]:
                         for p in parts:
                             if isinstance(p, dict):
                                 c_type = p.get("content_type")
-                                if c_type in ["image", "audio", "video", "text"]:
+                                if c_type in ["image", "audio", "video", "text", "file"]:
                                     found_parts.append(p)
     except ToolError:
         # 重新抛出 ToolError，不要被下面的通用异常捕获
@@ -215,7 +215,7 @@ def _handle_integrated_entrance_inner(
 
                 for part in tool_parts:
                     c_type = part.get("content_type")
-                    if c_type in ["image", "audio", "video"]:
+                    if c_type in ["image", "audio", "video", "file"]:
                         if last_assistant_entry is not None:
                             last_assistant_entry["part"].append(part)
                             logger.debug(f"挂载媒体 part 到上一个 entry: {part}")
@@ -365,7 +365,7 @@ def _handle_integrated_entrance_stream_inner(
                 text = part.get("content_text", "").strip()
                 if text:
                     human_content_blocks.append({"type": "text", "text": text})
-            elif c_type in ["image", "video", "audio"]:
+            elif c_type in ["image", "video", "audio", "file"]:
                 url = part.get("content_url")
                 if url:
                     # 收集上传的媒体资源（保持原始数据不变）
@@ -528,7 +528,7 @@ def _handle_integrated_entrance_stream_inner(
                         # 将工具结果附加到 entry
                         for part in tool_parts:
                             c_type = part.get("content_type")
-                            if c_type in ["image", "audio", "video", "text"]:
+                            if c_type in ["image", "audio", "video", "text", "file"]:
                                 if last_assistant_entry is not None:
                                     last_assistant_entry["part"].append(part)
                                     logger.debug(

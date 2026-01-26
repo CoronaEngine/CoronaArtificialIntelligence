@@ -1,6 +1,10 @@
 from __future__ import annotations
 
 import logging
+import os
+import tempfile
+import time
+import httpx
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel, Field
 from langchain_core.tools import StructuredTool
@@ -10,6 +14,40 @@ from ai_media_resource import get_media_registry
 from ai_tools.response_adapter import build_part, build_success_result, build_error_result
 
 from ai_modules.three_d_generate.tools.client_3d import Rodin3DClient
+
+
+import re
+import urllib.parse
+
+def _safe_filename(name: str) -> str:
+    name = (name or "").strip().replace("\\", "_").replace("/", "_")
+    name = re.sub(r'[:*?"<>|]+', "_", name)
+    name = re.sub(r"\s+", " ", name).strip()
+    return name or "download.bin"
+
+def _filename_from_url(url: str) -> str:
+    u = urllib.parse.urlparse(url)
+    base = (u.path or "").rstrip("/").split("/")[-1]
+    base = _safe_filename(base)
+    return base if "." in base else (base + ".bin")
+
+def _download_url_to_dir(url: str, out_dir: str, timeout: float = 120.0) -> str:
+    """下载 url 到 out_dir，返回保存后的绝对路径"""
+    os.makedirs(out_dir, exist_ok=True)
+    filename = _filename_from_url(url)
+    dest = os.path.join(out_dir, filename)
+
+    # 简单避免覆盖：若已存在则直接复用
+    if os.path.exists(dest) and os.path.getsize(dest) > 0:
+        return dest
+
+    with httpx.stream("GET", url, follow_redirects=True, timeout=timeout) as r:
+        r.raise_for_status()
+        with open(dest, "wb") as f:
+            for chunk in r.iter_bytes():
+                if chunk:
+                    f.write(chunk)
+    return dest
 
 
 class RodinGenerate3DInput(BaseModel):
@@ -35,6 +73,11 @@ class RodinGenerate3DInput(BaseModel):
     geometry_file_format: str = Field(default="glb")
     material: Optional[str] = None
     addons: Optional[str] = None
+
+    download_dir: Optional[str] = Field(
+        default=None,
+        description="可选：生成完成后把下载文件保存到该目录（不传则用配置/环境变量/临时目录）",
+    )
 
 
 
@@ -82,11 +125,12 @@ def load_3d_tools(config: AIConfig) -> List[StructuredTool]:
         geometry_file_format: str = "glb",
         material: Optional[str] = None,
         addons: Optional[str] = None,
+        download_dir: Optional[str] = None,
     ) -> str:
         try:
             mode = (mode or "").strip()
             image_list = []
-            for image in images:
+            for image in (images or []):
                 if image.startswith("fileid://"):
                     media = media_registry.get_by_file_id(image[9:].strip())
                     image_list.append(media.content_url)
@@ -125,15 +169,35 @@ def load_3d_tools(config: AIConfig) -> List[StructuredTool]:
                 poll_timeout=poll_timeout,
             )
             print("Rodin 3D 生成结果：", result)
+            # -----------------------------
+            # 下载到本地（避免最终返回 URL）
+            # 优先级：入参 download_dir > 配置 threed_config.download_dir > 环境变量 RODIN_3D_DOWNLOAD_DIR > 临时目录
+            # -----------------------------
+            cfg_download_dir = getattr(threed_config, "download_dir", None)
+            env_download_dir = os.environ.get("RODIN_3D_DOWNLOAD_DIR")
+            save_root = (download_dir or cfg_download_dir or env_download_dir or tempfile.mkdtemp(prefix="rodin_3d_")).strip()
+
+            # 推荐统一落到 model/ 子目录
+            if os.path.basename(save_root).lower() not in {"model", "models"}:
+                save_root = os.path.join(save_root, "model")
+
+            task_uuid = str(result.get("task_uuid") or "").strip()
+            save_dir = os.path.join(save_root, task_uuid or f"task_{int(time.time())}")
+            os.makedirs(save_dir, exist_ok=True)
             parts = []
             for it in result.get("downloads", []):
                 url = str(it.get("url", "")).strip()
                 if not url:
                     continue
+
+                # 下载到本地文件
+                local_path = _download_url_to_dir(url, save_dir, timeout=float(threed_config.request_timeout))
+
                 parts.append(
                     build_part(
                         content_type="file",
-                        content_text=url,
+                        content_text=local_path,
+
                         parameter={
                             "additional_type": ["rodin_3d"],
                             "mode": mode,

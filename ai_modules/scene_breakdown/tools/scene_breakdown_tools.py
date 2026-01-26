@@ -17,7 +17,8 @@ from ai_media_resource import get_media_registry
 from ai_models.base_pool import get_chat_model
 from ai_modules.image_generate.tools.image_tools import load_image_tools
 from ai_tools.context import get_current_session
-from ai_tools.response_adapter import (
+from ai_modules.scene_placement.tools.placement_tools import load_placement_tools
+from ai_tools.response_adapter import (                                                
     build_error_result,
     build_part,
     build_success_result,
@@ -64,6 +65,18 @@ class Generate3DFromSelectedInput(BaseModel):
     )
     mesh_format: str = Field(default="glb", description="输出 3D 格式，例如 glb/obj/fbx（取决于你的 3D 服务支持）")
     max_objects: int = Field(default=12, description="最多生成多少个 3D（防止一次勾选过多）")
+
+# -------------------------
+# Tool D: 3D 结果 + 文本布局 -> 写入 scene.json（调用 placement 模块）
+# -------------------------
+class PlaceSceneFromSelectedInput(BaseModel):
+    scene_path: str = Field(..., description="scene.json 输出路径（不存在则创建）")
+    scene_name: str = Field(default="scene", description="新建场景的 name")
+    scene_text: str = Field(..., description="原始场景文字描述（用于布局）")
+    room_size: List[float] = Field(..., description="房间尺寸 [width, depth]（单位米）")
+    selected_ids: Optional[List[str]] = Field(default=None, description="可选：要摆放的物体id列表（不传则使用 items 内 selected=true）")
+    items: List[Dict[str, Any]] = Field(..., description="generate_3d_from_selected 返回的 parameter.items（需包含 id/name/mesh_url）")
+
 
 
 # =========================
@@ -517,6 +530,75 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
         except Exception as e:
             return build_error_result(error_message=str(e)).to_envelope(interface_type="text")
 
+
+
+    def place_scene_from_selected(
+        scene_path: str,
+        scene_name: str,
+        scene_text: str,
+        room_size: List[float],
+        selected_ids: Optional[List[str]],
+        items: List[Dict[str, Any]],
+        run_config: RunnableConfig,
+        max_objects: int = 50,
+    ) -> str:
+        """调用 placement.place_scene_from_items 一键落盘并写 scene.json。
+
+        约束对齐：
+        - actor.name 使用生成阶段的 name
+        - actor.path 使用模型下载后的本地相对路径（placement 内部处理）
+        - pos/rot/scale 由 text_generate LLM 生成逻辑布局（placement 内部处理）
+        """
+        try:
+            if not items or not isinstance(items, list):
+                raise ValueError("items 不能为空（请传入 generate_3d_from_selected 返回的 parameter.items）")
+
+            selected = _pick_selected_items(items, selected_ids, max_objects)
+            if not selected:
+                raise ValueError("未找到任何选中物品（请传 selected_ids 或在 items 内标记 selected）")
+
+            # 组装 placement.items
+            placement_items = []
+            for it in selected:
+                object_id = str(it.get("id") or it.get("object_id") or "").strip()
+                if not object_id:
+                    raise ValueError(f"物体缺少 id/object_id: {it}")
+                name = str(it.get("name") or "").strip() or object_id
+                mesh_url = str(it.get("mesh_url") or "").strip()
+                if not mesh_url:
+                    raise ValueError(f"物体缺少 mesh_url: {it}")
+
+                placement_items.append(
+                    {
+                        "object_id": object_id,
+                        "name": name,
+                        "mesh_url": mesh_url,
+                        "model_type": str(it.get("mesh_format") or "glb"),
+                    }
+                )
+
+            # 调用 placement 模块工具
+            placement_tools = load_placement_tools(config)
+            tool = None
+            for t in placement_tools:
+                if getattr(t, "name", "") == "place_scene_from_items":
+                    tool = t
+                    break
+            if tool is None:
+                raise RuntimeError("placement 模块未加载到 place_scene_from_items 工具（请确认已安装 placement_module_v2）")
+
+            # 直接返回 placement 的 envelope（它内部不会在 content_text 里输出 URL）
+            return tool.func(
+                scene_path=scene_path,
+                scene_name=scene_name,
+                scene_text=scene_text,
+                room_size=room_size,
+                items=placement_items,
+            )
+
+        except Exception as e:
+            return build_error_result(error_message=str(e)).to_envelope(interface_type="text")
+
     return [
         StructuredTool(
             name="generate_object_list",
@@ -535,6 +617,12 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
             description="从选中物品的图片生成对应 3D 模型：会先 resolve 图片为 http(s) URL，再调用 3D 服务。",
             func=generate_3d_from_selected,
             args_schema=Generate3DFromSelectedInput,
+        ),
+        StructuredTool(
+            name="place_scene_from_selected",
+            description="将生成的3D结果下载到本地并写入scene.json；pos/rot/scale由text_generate进行逻辑布局（调用placement模块）。",
+            func=place_scene_from_selected,
+            args_schema=PlaceSceneFromSelectedInput,
         ),
     ]
 

@@ -209,6 +209,36 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         source="tools.model_tools",
     )
 
+# -----------------------------------------------------------------------
+#  场景拆解工具（breakdown）
+# -----------------------------------------------------------------------
+    from ai_modules.scene_breakdown.tools.scene_breakdown_tools import load_scene_breakdown_tools
+
+    registry.register_loader(
+        loader=load_scene_breakdown_tools,
+        category=ToolCategory.SCENE,
+        dependencies=[
+            # ToolDependency(DependencyType.CONFIG_PROVIDER, provider="rodin"),
+        ],
+        requires_config=True,
+        source="tools.scene_breakdown_tools",
+    )
+
+# -----------------------------------------------------------------------
+#  场景布局json工具（placement）
+# -----------------------------------------------------------------------
+    from ai_modules.scene_placement.tools.placement_tools import load_placement_tools
+
+    registry.register_loader(
+        loader=load_placement_tools,
+        category=ToolCategory.SCENE,
+        dependencies=[
+            # ToolDependency(DependencyType.CONFIG_PROVIDER, provider="rodin"),
+        ],
+        requires_config=True,
+        source="tools.placement_tools",
+    )
+
 
 # ===========================================================================
 # 公开 API

@@ -56,6 +56,14 @@ modules:
     enabled: true
     description: "3D模型生成"
 
+  - name: scene_breakdown
+    enabled: true
+    description: "场景分解"
+
+  - name: scene_placement
+    enabled: true
+    description: "场景布置"
+
   # 检测模块
   - name: detection
     enabled: true
