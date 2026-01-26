@@ -12,7 +12,7 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
-from ai_config.ai_config import AIConfig
+from ai_config.ai_config import AIConfig, get_ai_config
 from ai_media_resource import get_media_registry
 from ai_models.base_pool import get_chat_model
 from ai_modules.image_generate.tools.image_tools import load_image_tools
@@ -160,6 +160,9 @@ def _pick_selected_items(items: List[Dict[str, Any]], selected_ids: Optional[Lis
             if it.get("selected") is True or it.get("selected_default") is True:
                 selected.append(it)
 
+    if not selected:
+        selected = items.copy()
+
     max_objects = max(1, int(max_objects))
     return selected[:max_objects]
 
@@ -233,7 +236,7 @@ def _call_3d_service(image_url: str, mesh_format: str) -> Tuple[str, Optional[st
 def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
     # 文本模型：负责拆解清单
     llm = get_chat_model(category="text", temperature=0.6, request_timeout=60.0)
-
+    config = get_ai_config()
     # 图像工具：负责生成单体物品图
     image_tools = load_image_tools(config)
     gen_tool: Optional[StructuredTool] = None
@@ -601,29 +604,9 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
 
     return [
         StructuredTool(
-            name="generate_object_list",
-            description="生成物品清单用于用户勾选：不生成图片、不包含布局动线/多视角。",
-            func=generate_object_list,
-            args_schema=GenerateObjectListInput,
-        ),
-        StructuredTool(
-            name="generate_images_from_selected",
-            description="对用户勾选的物品逐个生成单体物品图：一物一图，返回多个 image parts。",
-            func=generate_images_from_selected,
-            args_schema=GenerateImagesFromSelectedInput,
-        ),
-        StructuredTool(
-            name="generate_3d_from_selected",
-            description="从选中物品的图片生成对应 3D 模型：会先 resolve 图片为 http(s) URL，再调用 3D 服务。",
-            func=generate_3d_from_selected,
-            args_schema=Generate3DFromSelectedInput,
-        ),
-        StructuredTool(
             name="place_scene_from_selected",
-            description="将生成的3D结果下载到本地并写入scene.json；pos/rot/scale由text_generate进行逻辑布局（调用placement模块）。",
+            description="将生成的3D结果保存场景的json格式；pos/rot/scale由text_generate进行逻辑布局（调用placement模块）。",
             func=place_scene_from_selected,
             args_schema=PlaceSceneFromSelectedInput,
         ),
     ]
-
-all = ["load_scene_breakdown_tools"]

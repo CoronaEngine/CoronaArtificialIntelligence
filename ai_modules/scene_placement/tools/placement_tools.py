@@ -16,7 +16,7 @@ from ai_config.ai_config import AIConfig  # type: ignore
 from ai_media_resource import get_media_registry  # type: ignore
 from ai_tools.response_adapter import build_part, build_success_result, build_error_result  # type: ignore
 
-from ai_modules.scene_placement.configs.loader import _load_scene_placement_config
+from ai_modules.scene_placement.tools.loader import load_scene_placement_config
 
 logger = logging.getLogger(__name__)
 
@@ -223,7 +223,7 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
     cfg = getattr(config, "scene_placement", None)
     if cfg is None:
         raw = getattr(config, "settings", {}).get("scene_placement") if hasattr(config, "settings") else None
-        cfg = _load_scene_placement_config(raw)
+        cfg = load_scene_placement_config(raw)
 
     template = _load_template_scene(getattr(cfg, "template_scene_path", None))
     sun_dir = [float(cfg.sun_direction_x), float(cfg.sun_direction_y), float(cfg.sun_direction_z)]
@@ -294,28 +294,29 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
                 rot = _ensure_vec3(it.rot, base["rot"])
                 scale = _ensure_vec3(it.scale, base["scale"])
 
-                # local model path
-                local_file: Optional[Path] = None
-                if it.local_path:
-                    p = Path(it.local_path)
-                    if p.exists():
-                        local_file = p
-
-                if local_file is None:
-                    if not it.mesh_url:
-                        raise ValueError(f"object_id={oid} 缺少 mesh_url/local_path")
-                    env = json.loads(download_model_asset(oid, it.mesh_url, it.file_name))
-                    llm_content = env.get("llm_content", []) or []
-                    saved_path = None
-                    if llm_content and isinstance(llm_content, list):
-                        parts = (llm_content[0] or {}).get("part", []) or []
-                        for p in parts:
-                            if isinstance(p, dict) and p.get("content_type") == "file":
-                                saved_path = p.get("content_text")
-                                break
-                    if not saved_path:
-                        raise RuntimeError(f"object_id={oid} 下载失败：未返回本地路径")
-                    local_file = Path(saved_path)
+                # # local model path
+                # local_file: Optional[Path] = None
+                # if it.local_path:
+                #     p = Path(it.local_path)
+                #     if p.exists():
+                #         local_file = p
+                #
+                # if local_file is None:
+                #     if not it.mesh_url:
+                #         raise ValueError(f"object_id={oid} 缺少 mesh_url/local_path")
+                #     env = json.loads(download_model_asset(oid, it.mesh_url, it.file_name))
+                #     llm_content = env.get("llm_content", []) or []
+                #     saved_path = None
+                #     if llm_content and isinstance(llm_content, list):
+                #         parts = (llm_content[0] or {}).get("part", []) or []
+                #         for p in parts:
+                #             if isinstance(p, dict) and p.get("content_type") == "file":
+                #                 saved_path = p.get("content_text")
+                #                 break
+                #     if not saved_path:
+                #         raise RuntimeError(f"object_id={oid} 下载失败：未返回本地路径")
+                #     local_file = Path(saved_path)
+                local_file = Path(it.mesh_url)
 
                 if local_file is None or not local_file.exists():
                     raise RuntimeError(f"object_id={oid} 本地模型不存在: {local_file}")
