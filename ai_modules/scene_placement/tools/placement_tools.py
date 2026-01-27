@@ -244,7 +244,7 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
                 raise ValueError("mesh_url 为空或无法解析 fileid://")
 
             out_dir = Path(str(cfg.asset_root)) / (subdir or str(cfg.model_subdir)) / str(object_id)
-            fname = file_name or _filename_from_url(url)
+            fname = _safe_filename(file_name) if file_name else _filename_from_url(url)
             saved = _download_url(
                 url,
                 out_dir / fname,

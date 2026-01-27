@@ -581,27 +581,50 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
                 )
 
             # 调用 placement 模块工具
-            placement_tools = load_placement_tools(config)
+            placement_items = []
+            for idx, it in enumerate(selected, start=1):
+                short_id = f"{idx:02d}"
+                object_id = str(it.get("id") or it.get("object_id") or "").strip()
+                if not object_id:
+                    raise ValueError(f"物体缺少 id/object_id: {it}")
+                name = str(it.get("name") or "").strip() or object_id
+                mesh_url = str(it.get("mesh_url") or "").strip()
+                if not mesh_url:
+                    raise ValueError(f"物体缺少 mesh_url: {it}")
+
+                mesh_format = str(it.get("mesh_format") or "glb").strip().lower()
+                placement_items.append(
+                    {
+                        "object_id": object_id,
+                        "name": name,
+                        "mesh_url": mesh_url,
+                        "model_type": mesh_format,
+                        "file_name": f"{short_id}.{mesh_format}",  # 01.glb / 02.glb ...
+                        "short_id": short_id,
+                    }
+                )
+                
+            # 直接返回 placement 的 envelope（它内部不会在 content_text 里输出 URL）
+            placement_tools = load_placement_tools(run_config.get("configurable", {}).get("ai_config") or AIConfig())
             tool = None
             for t in placement_tools:
-                if getattr(t, "name", "") == "place_scene_from_items":
+                if t.name == "place_scene_from_items":
                     tool = t
                     break
             if tool is None:
-                raise RuntimeError("placement 模块未加载到 place_scene_from_items 工具（请确认已安装 placement_module_v2）")
+                raise RuntimeError("未找到 placement 工具 place_scene_from_items")
 
-            # 直接返回 placement 的 envelope（它内部不会在 content_text 里输出 URL）
-            return tool.func(
-                scene_path=scene_path,
-                scene_name=scene_name,
-                scene_text=scene_text,
-                room_size=room_size,
-                items=placement_items,
-            )
+            payload = {
+                "scene_path": scene_path,
+                "scene_name": scene_name,
+                "room_size": room_size,
+                "items": placement_items,
+            }
+            return tool.run(payload)
 
         except Exception as e:
             return build_error_result(error_message=str(e)).to_envelope(interface_type="text")
-
+        
     return [
         StructuredTool(
             name="place_scene_from_selected",
