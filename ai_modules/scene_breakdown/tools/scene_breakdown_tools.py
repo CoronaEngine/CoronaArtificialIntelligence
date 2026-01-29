@@ -83,6 +83,81 @@ class PlaceSceneFromSelectedInput(BaseModel):
 # Helpers
 # =========================
 
+def _extract_json_any(raw: str) -> dict:
+    """
+    允许模型直接输出 JSON 或 ```json ... ``` 包裹的 JSON
+    """
+    raw = (raw or "").strip()
+    if not raw:
+        raise ValueError("模型输出为空")
+
+    m = re.search(r"```json\s*(\{.*\})\s*```", raw, flags=re.S | re.I)
+    if m:
+        return json.loads(m.group(1))
+
+    # 兜底：直接尝试整段解析
+    return json.loads(raw)
+
+
+def _ensure_room_size_3d(room_size: List[float]) -> List[float]:
+    """
+    你的入参现在是 [width, depth]（2维）:contentReference[oaicite:1]{index=1}
+    placement 侧更稳的是 [L, W, H]（3维）。这里做兼容：
+    - 2维 -> 补一个默认高度 3.0
+    - 3维 -> 原样
+    """
+    if not room_size or len(room_size) < 2:
+        raise ValueError("room_size 至少需要 [width, depth]")
+    w = float(room_size[0])
+    d = float(room_size[1])
+    h = float(room_size[2]) if len(room_size) >= 3 else 3.0
+    return [w, d, h]
+
+
+def _gen_layout_with_llm(llm, scene_text: str, room_size_3d: List[float], objects: List[Dict[str, Any]]) -> Dict[str, Dict[str, List[float]]]:
+    """
+    输出映射：{ "<short_id>": {"pos":[x,y,z], "rot":[x,y,z], "scale":[x,y,z]} }
+    用 short_id（01/02/..）而不是 object_id，避免 object_id 太长/不稳定。
+    """
+    obj_min = [{"short_id": o["short_id"], "name": o["name"]} for o in objects]
+
+    prompt = f"""
+你只输出 JSON，不输出任何自然语言。
+
+坐标/单位约定：
+- pos = [x, y, z]，单位米。y 固定为 0（放在地面）
+- rot = [rx, ry, rz]，单位“度”，只需要大概朝向（常用 ry）
+- scale = [sx, sy, sz]，默认 [1,1,1]，允许小幅调整（0.8~1.2）
+
+房间尺寸 room_size = {room_size_3d}，含义：[width, depth, height]
+要求：
+- 所有 pos.x 在 [0, width] 内，pos.z 在 [0, depth] 内
+- 避免重叠：不同物体之间间距 >= 0.5m（大概即可）
+- 常识摆放（客厅示例：沙发靠墙，电视正对沙发，茶几在沙发前，绿植靠角落）
+
+场景描述：
+{scene_text}
+
+objects（short_id 为最终编号）：
+{json.dumps(obj_min, ensure_ascii=False)}
+
+输出格式严格为：
+{{
+  "layout": {{
+    "01": {{"pos":[...], "rot":[...], "scale":[...]}},
+    "02": {{"pos":[...], "rot":[...], "scale":[...]}},
+    ...
+  }}
+}}
+""".strip()
+
+    resp = llm.invoke([SystemMessage(content="你是室内布局助手，只输出JSON。"), HumanMessage(content=prompt)])
+    data = _extract_json_any(resp.content or "")
+    layout = data.get("layout") or {}
+    if not isinstance(layout, dict):
+        raise ValueError("layout 字段缺失或格式错误")
+    return layout
+
 
 def _extract_json(raw: str) -> dict:
     m = re.search(r"```json\s*(\{.*?\})\s*```", raw, flags=re.S | re.I)
@@ -545,12 +620,9 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
         run_config: RunnableConfig,
         max_objects: int = 50,
     ) -> str:
-        """调用 placement.place_scene_from_items 一键落盘并写 scene.json。
-
-        约束对齐：
-        - actor.name 使用生成阶段的 name
-        - actor.path 使用模型下载后的本地相对路径（placement 内部处理）
-        - pos/rot/scale 由 text_generate LLM 生成逻辑布局（placement 内部处理）
+        """
+        调用 placement.place_scene_from_items 一键落盘并写 scene.json。
+        新增：用 LLM 先生成每个物体的 pos/rot/scale（粗布局），写入 placement_items。
         """
         try:
             if not items or not isinstance(items, list):
@@ -560,55 +632,61 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
             if not selected:
                 raise ValueError("未找到任何选中物品（请传 selected_ids 或在 items 内标记 selected）")
 
-            # 组装 placement.items
-            placement_items = []
-            for it in selected:
-                object_id = str(it.get("id") or it.get("object_id") or "").strip()
-                if not object_id:
-                    raise ValueError(f"物体缺少 id/object_id: {it}")
-                name = str(it.get("name") or "").strip() or object_id
-                mesh_url = str(it.get("mesh_url") or "").strip()
-                if not mesh_url:
-                    raise ValueError(f"物体缺少 mesh_url: {it}")
+            room_size_3d = _ensure_room_size_3d(room_size)
 
-                placement_items.append(
-                    {
-                        "object_id": object_id,
-                        "name": name,
-                        "mesh_url": mesh_url,
-                        "model_type": str(it.get("mesh_format") or "glb"),
-                    }
-                )
-
-            # 调用 placement 模块工具
-            placement_items = []
+            # 先构建对象列表 + 编号（01/02/...）
+            objects = []
             for idx, it in enumerate(selected, start=1):
                 short_id = f"{idx:02d}"
                 object_id = str(it.get("id") or it.get("object_id") or "").strip()
                 if not object_id:
                     raise ValueError(f"物体缺少 id/object_id: {it}")
+
                 name = str(it.get("name") or "").strip() or object_id
                 mesh_url = str(it.get("mesh_url") or "").strip()
                 if not mesh_url:
                     raise ValueError(f"物体缺少 mesh_url: {it}")
 
                 mesh_format = str(it.get("mesh_format") or "glb").strip().lower()
-                placement_items.append(
+
+                objects.append(
                     {
+                        "short_id": short_id,
                         "object_id": object_id,
                         "name": name,
                         "mesh_url": mesh_url,
-                        "model_type": mesh_format,
-                        "file_name": f"{short_id}.{mesh_format}",  # 01.glb / 02.glb ...
-                        "short_id": short_id,
+                        "mesh_format": mesh_format,
                     }
                 )
-                
-            # 直接返回 placement 的 envelope（它内部不会在 content_text 里输出 URL）
+
+            # 用 LLM 生成布局（按 short_id 输出）
+            layout_map = _gen_layout_with_llm(llm, scene_text=scene_text, room_size_3d=room_size_3d, objects=objects)
+
+            # 组装 placement.items（填入 pos/rot/scale + 文件名）
+            placement_items = []
+            for o in objects:
+                sid = o["short_id"]
+                tr = layout_map.get(sid) or {}
+
+                placement_items.append(
+                    {
+                        "object_id": o["object_id"],
+                        "name": o["name"],
+                        "mesh_url": o["mesh_url"],
+                        "model_type": o["mesh_format"],
+                        "file_name": f"{sid}.{o['mesh_format']}",  # 01.glb / 02.glb ...
+                        "short_id": sid,
+                        "pos": tr.get("pos"),
+                        "rot": tr.get("rot"),
+                        "scale": tr.get("scale"),
+                    }
+                )
+
+            # 调用 placement 模块工具（注意：不要传 scene_text；placement schema 不支持这个参数）
             placement_tools = load_placement_tools(run_config.get("configurable", {}).get("ai_config") or AIConfig())
             tool = None
             for t in placement_tools:
-                if t.name == "place_scene_from_items":
+                if getattr(t, "name", "") == "place_scene_from_items":
                     tool = t
                     break
             if tool is None:
@@ -617,7 +695,7 @@ def load_scene_breakdown_tools(config: AIConfig) -> List[StructuredTool]:
             payload = {
                 "scene_path": scene_path,
                 "scene_name": scene_name,
-                "room_size": room_size,
+                "room_size": room_size_3d,  # 传 3 维更稳
                 "items": placement_items,
             }
             return tool.run(payload)

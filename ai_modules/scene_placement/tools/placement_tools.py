@@ -172,6 +172,61 @@ def _ensure_vec3(x: Any, default: List[float]) -> List[float]:
     return default
 
 
+# ✅ 强制输出到 CoronaEngine 内部：<CoronaEngine>/Scenes/<scene_name>/scene.json
+def _find_coronaengine_root() -> Path:
+    # 1) 支持显式指定（可选）
+    env = (os.environ.get("CORONAENGINE_ROOT") or "").strip()
+    if env:
+        return Path(env)
+
+    # 2) 从当前文件向上找名为 CoronaEngine 的目录
+    p = Path(__file__).resolve()
+    for parent in p.parents:
+        if parent.name.lower() == "coronaengine":
+            return parent
+
+    # 3) 最后兜底（你机器上的固定路径；不存在也不致命，会在后面 mkdir 时抛）
+    return Path(r"F:\GitHub\CoronaEngine")
+
+
+def _normalize_scene_output_path(scene_path: str, scene_name: str) -> Path:
+    root = _find_coronaengine_root()
+    out_dir = root / "Scenes" / (scene_name or "scene")
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # 统一文件名：scene.json（避免上游乱传导致到处写）
+    return out_dir / "scene.json"
+
+
+def _extract_first_file_path(env: Dict[str, Any]) -> Optional[str]:
+    """
+    兼容两种 envelope：
+    1) {"result":{"parts":[{"content_type":"file","content_text":"..."}]}}
+    2) {"llm_content":[{"part":[{"content_type":"file","content_text":"..."}]}]}
+    """
+    # 优先 result.parts
+    result = env.get("result")
+    if isinstance(result, dict):
+        parts = result.get("parts")
+        if isinstance(parts, list):
+            for p in parts:
+                if isinstance(p, dict) and p.get("content_type") == "file" and p.get("content_text"):
+                    return str(p["content_text"])
+
+    # 其次 llm_content[0].part
+    llm_content = env.get("llm_content")
+    if isinstance(llm_content, list) and llm_content:
+        first = llm_content[0]
+        if isinstance(first, dict):
+            parts = first.get("part")
+            if isinstance(parts, list):
+                for p in parts:
+                    if isinstance(p, dict) and p.get("content_type") == "file" and p.get("content_text"):
+                        return str(p["content_text"])
+
+    return None
+
+
 # -------------------------
 # schemas
 # -------------------------
@@ -197,7 +252,7 @@ class DownloadModelInput(BaseModel):
 
 
 class PlaceSceneInput(BaseModel):
-    scene_path: str = Field(..., description="Output scene.json path")
+    scene_path: str = Field(..., description="Output scene.json path (will be normalized into CoronaEngine)")
     scene_name: str = Field("scene", description="Scene name")
     room_size: List[float] = Field(default_factory=lambda: [5, 3, 5], description="Room size (L,W,H)")
     items: List[PlacementItem] = Field(default_factory=list, description="Items")
@@ -216,10 +271,8 @@ class UpdateActorTransformInput(BaseModel):
 # -------------------------
 
 def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
-    # === 观测点 2：工具是否被装载到工具池 ===
     logger.info("[scene_placement] load_placement_tools called")
 
-    # 由 register_loader 注入 config.scene_placement；若不存在就从 settings 解析
     cfg = getattr(config, "scene_placement", None)
     if cfg is None:
         raw = getattr(config, "settings", {}).get("scene_placement") if hasattr(config, "settings") else None
@@ -273,10 +326,11 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
             return build_error_result(error_message=str(e)).to_envelope(interface_type="media")
 
     def place_scene_from_items(scene_path: str, scene_name: str = "scene", room_size: List[float] = [5, 3, 5], items: List[PlacementItem] = []) -> str:
-        # === 观测点 3：核心工具是否被调用 ===
         logger.info("[scene_placement] place_scene_from_items called scene_path=%s items=%d", scene_path, len(items or []))
         try:
-            sp = Path(scene_path)
+            # ✅ 强制把输出路径归一到 CoronaEngine 内
+            sp = _normalize_scene_output_path(scene_path, scene_name)
+
             scene = _new_scene_from_template(template, scene_name=scene_name, sun_dir=sun_dir)
 
             base_layouts = _deterministic_layout(
@@ -294,29 +348,31 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
                 rot = _ensure_vec3(it.rot, base["rot"])
                 scale = _ensure_vec3(it.scale, base["scale"])
 
-                # # local model path
-                # local_file: Optional[Path] = None
-                # if it.local_path:
-                #     p = Path(it.local_path)
-                #     if p.exists():
-                #         local_file = p
-                #
-                # if local_file is None:
-                #     if not it.mesh_url:
-                #         raise ValueError(f"object_id={oid} 缺少 mesh_url/local_path")
-                #     env = json.loads(download_model_asset(oid, it.mesh_url, it.file_name))
-                #     llm_content = env.get("llm_content", []) or []
-                #     saved_path = None
-                #     if llm_content and isinstance(llm_content, list):
-                #         parts = (llm_content[0] or {}).get("part", []) or []
-                #         for p in parts:
-                #             if isinstance(p, dict) and p.get("content_type") == "file":
-                #                 saved_path = p.get("content_text")
-                #                 break
-                #     if not saved_path:
-                #         raise RuntimeError(f"object_id={oid} 下载失败：未返回本地路径")
-                #     local_file = Path(saved_path)
-                local_file = Path(it.mesh_url)
+                # ✅ local model path：优先 local_path；否则 mesh_url 若为本地路径就用；否则下载
+                local_file: Optional[Path] = None
+
+                if it.local_path:
+                    p = Path(str(it.local_path))
+                    if p.exists():
+                        local_file = p
+
+                if local_file is None:
+                    mu = (it.mesh_url or "").strip()
+                    if not mu:
+                        raise ValueError(f"object_id={oid} 缺少 mesh_url/local_path")
+
+                    # mesh_url 本身就是本地路径
+                    p = Path(mu)
+                    if p.exists():
+                        local_file = p
+                    else:
+                        # 下载（支持 fileid:// 和 http(s)）
+                        env = json.loads(download_model_asset(oid, mu, it.file_name))
+                        saved_path = _extract_first_file_path(env)
+                        if not saved_path:
+                            raise RuntimeError(f"object_id={oid} 下载失败：未返回本地路径 env={env}")
+
+                        local_file = Path(saved_path)
 
                 if local_file is None or not local_file.exists():
                     raise RuntimeError(f"object_id={oid} 本地模型不存在: {local_file}")
@@ -335,8 +391,6 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
                 created.append(actor)
 
             _save_scene(scene, sp)
-
-            # === 观测点 4：json 是否真正落盘 ===
             logger.info("[scene_placement] scene.json written: %s (size=%d)", str(sp), sp.stat().st_size)
 
             scene_text = sp.read_text(encoding="utf-8")
@@ -365,7 +419,8 @@ def load_placement_tools(config: AIConfig) -> List[StructuredTool]:
     def update_actor_transform(scene_path: str, actor_name: str, pos: Optional[List[float]] = None, rot: Optional[List[float]] = None, scale: Optional[List[float]] = None) -> str:
         logger.info("[scene_placement] update_actor_transform called scene_path=%s actor_name=%s", scene_path, actor_name)
         try:
-            sp = Path(scene_path)
+            # ✅ update 也按同样规则归一（避免用户传 C:\xxx.json）
+            sp = _normalize_scene_output_path(scene_path, "scene")
             if not sp.exists():
                 raise FileNotFoundError(f"scene.json not found: {sp}")
 
