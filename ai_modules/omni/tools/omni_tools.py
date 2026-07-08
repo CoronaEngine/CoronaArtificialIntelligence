@@ -24,6 +24,12 @@ from ....ai_models.base_pool import (
 logger = logging.getLogger(__name__)
 
 
+def _cfg_get(cfg, key: str, default=None):
+    if isinstance(cfg, dict):
+        return cfg.get(key, default)
+    return getattr(cfg, key, default)
+
+
 class MediaUnderstandingInput(BaseModel):
     """多模态理解输入参数"""
 
@@ -55,10 +61,10 @@ def load_omni_tools(config: AIConfig) -> List[StructuredTool]:
     - 多供应商适配
     """
     omni_cfg = config.omni
-    if not omni_cfg.enable:
+    if not _cfg_get(omni_cfg, "enable", False):
         return []
 
-    if not omni_cfg.provider or not omni_cfg.model:
+    if not _cfg_get(omni_cfg, "provider") or not _cfg_get(omni_cfg, "model"):
         return []
 
     # 获取池注册表（自动检测账号池或降级模式）

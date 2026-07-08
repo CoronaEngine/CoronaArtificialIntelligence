@@ -18,6 +18,7 @@ class ConfigCollector:
         return (
             module_name.startswith("ai_modules.")
             or module_name.startswith("Quasar.ai_modules.")
+            or module_name.startswith("plugins.AITool.Quasar.ai_modules.")
         ) and module_name.endswith(".configs.settings")
 
     def _should_replace_setting(self, key: str, new_source: str) -> bool:

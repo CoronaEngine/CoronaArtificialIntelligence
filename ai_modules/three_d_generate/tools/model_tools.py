@@ -43,6 +43,12 @@ def _is_placeholder_api_key(value: str) -> bool:
     } or "yourapikey" in compact
 
 
+def _cfg_get(cfg: Any, key: str, default: Any = None) -> Any:
+    if isinstance(cfg, dict):
+        return cfg.get(key, default)
+    return getattr(cfg, key, default)
+
+
 # ---------------------------------------------------------------------------
 # Mesh 下载完成 Event 注册表
 # ---------------------------------------------------------------------------
@@ -355,15 +361,30 @@ class Hunyuan3DGenerate3DInput(BaseModel):
 def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
     hunyuan_config = config.hunyuan3d
 
-    if not getattr(hunyuan_config, 'enable', False):
+    # 兼容 dict / Object，同时直接兜底读 AI_SETTINGS 原始字典
+    enable = _cfg_get(hunyuan_config, "enable", False)
+    if not enable:
+        try:
+            from ....ai_service.entrance import ai_entrance as _fallback_entrance
+            _raw_settings = _fallback_entrance.collector.AI_SETTINGS
+            _hunyuan_raw = _raw_settings.get("hunyuan3d", {}) if isinstance(_raw_settings, dict) else {}
+            if isinstance(_hunyuan_raw, dict) and _hunyuan_raw.get("enable") is True:
+                logger.warning(
+                    "混元3D 配置对象 enable=False 但 AI_SETTINGS 原始字典 enable=True，"
+                    "使用原始字典值覆盖 (config_type=%s)", type(hunyuan_config).__name__
+                )
+                enable = True
+        except Exception:
+            pass
+    if not enable:
         logger.info("混元3D 已禁用 (enable=False)，跳过工具加载")
         return []
 
-    api_key = (hunyuan_config.api_key or "").strip()
+    api_key = (_cfg_get(hunyuan_config, "api_key", "") or "").strip()
 
     # 收集所有可用 AK: api_keys 列表优先, 单 api_key 兜底
     all_keys: List[str] = []
-    api_keys_cfg = getattr(hunyuan_config, 'api_keys', None)
+    api_keys_cfg = _cfg_get(hunyuan_config, "api_keys", None)
     if api_keys_cfg and isinstance(api_keys_cfg, list):
         all_keys.extend(str(k).strip() for k in api_keys_cfg if str(k).strip())
     if api_key and api_key not in all_keys:
@@ -374,7 +395,7 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
             "混元3D api_key 缺失：请在 settings.hunyuan3d.api_key 或 api_keys 中配置"
         )
 
-    configured_concurrent = getattr(hunyuan_config, 'max_concurrent_generations', 1) or 1
+    configured_concurrent = _cfg_get(hunyuan_config, "max_concurrent_generations", 1) or 1
     per_key_concurrent = 1
     try:
         configured_concurrent_value = int(configured_concurrent)
@@ -386,14 +407,18 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
             per_key_concurrent,
             configured_concurrent,
         )
+    region = _cfg_get(hunyuan_config, "region", "ap-guangzhou")
+    endpoint = _cfg_get(hunyuan_config, "endpoint", "tokenhub.tencentmaas.com")
+    request_timeout = float(_cfg_get(hunyuan_config, "request_timeout", 300.0))
+    version = _cfg_get(hunyuan_config, "version", "pro")
     # 创建 client 池: 每个 AK 一个 client, round-robin 分配
     _clients = [
         Hunyuan3DClient(
             api_key=k,
-            region=hunyuan_config.region,
-            endpoint=hunyuan_config.endpoint,
-            timeout=float(hunyuan_config.request_timeout),
-            version=hunyuan_config.version,
+            region=region,
+            endpoint=endpoint,
+            timeout=request_timeout,
+            version=version,
             max_concurrent=per_key_concurrent,
         )
         for k in all_keys
@@ -413,13 +438,13 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
         len(_clients), per_key_concurrent, len(_clients) * per_key_concurrent,
     )
 
-    poll_interval = hunyuan_config.poll_interval
-    poll_timeout = hunyuan_config.poll_timeout
-    default_result_format = hunyuan_config.result_format
-    default_enable_pbr = hunyuan_config.enable_pbr
-    default_generate_type = hunyuan_config.generate_type
-    default_model = hunyuan_config.model
-    default_face_count = hunyuan_config.face_count
+    poll_interval = _cfg_get(hunyuan_config, "poll_interval", 3.0)
+    poll_timeout = _cfg_get(hunyuan_config, "poll_timeout", 600.0)
+    default_result_format = _cfg_get(hunyuan_config, "result_format", "GLB")
+    default_enable_pbr = _cfg_get(hunyuan_config, "enable_pbr", False)
+    default_generate_type = _cfg_get(hunyuan_config, "generate_type", "Normal")
+    default_model = _cfg_get(hunyuan_config, "model", "3.0")
+    default_face_count = _cfg_get(hunyuan_config, "face_count", 500000)
 
     media_registry = get_media_registry()
 
@@ -473,7 +498,7 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                     local_path = _download_url_to_dir(
                         url,
                         str(object_dir),
-                        timeout=float(hunyuan_config.request_timeout),
+                        timeout=request_timeout,
                         preferred_filename=preferred,
                     )
 
@@ -719,7 +744,7 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                     local_path = _download_url_to_dir(
                         url,
                         str(object_dir),
-                        timeout=float(hunyuan_config.request_timeout),
+                        timeout=request_timeout,
                         preferred_filename=preferred,
                     )
                     relative_path = _to_repo_relative_path(local_path, repo_root)

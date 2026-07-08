@@ -195,8 +195,11 @@ def warmup_tools() -> None:
     """
     try:
         from . import load_tools
-        from ..ai_config.ai_config import get_ai_config
+        from ..ai_config.ai_config import get_ai_config, reload_ai_config
 
+        # 强制刷新配置缓存：内置模块可能在用户 ai_setting.py 之前已缓存了
+        # enable=False 的默认配置，reload 确保读取最新用户设置。
+        reload_ai_config()
         config = get_ai_config()
         tools = load_tools(config)
         logger.debug(f"工具预热完成: 注册 {len(tools)} 个工具")
