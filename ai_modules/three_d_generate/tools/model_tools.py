@@ -253,6 +253,7 @@ def _download_url_to_dir(
     out_dir: str,
     timeout: float = 120.0,
     preferred_filename: Optional[str] = None,
+    max_attempts: int = 3,
 ) -> str:
     """下载 url 到 out_dir，返回保存后的绝对路径"""
     os.makedirs(out_dir, exist_ok=True)
@@ -282,37 +283,61 @@ def _download_url_to_dir(
         except Exception:
             pass
 
-    # 增强下载鲁棒性，避免 HTTP 连接中途断开导致残留不完整文件
-    with httpx.stream(
-        "GET",
-        url,
-        follow_redirects=True,
-        timeout=httpx.Timeout(timeout, connect=30.0, read=max(timeout, 300.0), write=max(timeout, 300.0)),
-    ) as r:
-        r.raise_for_status()
-        content_length = 0
+    attempts = max(1, min(5, int(max_attempts or 1)))
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
         try:
-            content_length = int(r.headers.get("content-length", "0"))
-        except (TypeError, ValueError):
-            content_length = 0
+            with httpx.stream(
+                "GET",
+                url,
+                follow_redirects=True,
+                timeout=httpx.Timeout(
+                    timeout,
+                    connect=30.0,
+                    read=max(timeout, 300.0),
+                    write=max(timeout, 300.0),
+                ),
+            ) as r:
+                r.raise_for_status()
+                try:
+                    content_length = int(r.headers.get("content-length", "0"))
+                except (TypeError, ValueError):
+                    content_length = 0
 
-        bytes_written = 0
-        with open(tmp_dest, "wb") as f:
-            for chunk in r.iter_bytes(chunk_size=65536):
-                if chunk:
-                    f.write(chunk)
-                    bytes_written += len(chunk)
-            f.flush()
-            os.fsync(f.fileno())
+                bytes_written = 0
+                with open(tmp_dest, "wb") as f:
+                    for chunk in r.iter_bytes(chunk_size=65536):
+                        if chunk:
+                            f.write(chunk)
+                            bytes_written += len(chunk)
+                    f.flush()
+                    os.fsync(f.fileno())
 
-    if content_length > 0 and bytes_written < content_length:
-        os.remove(tmp_dest)
-        raise IOError(
-            f"文件下载不完整: {url}, 期待 {content_length} bytes, 实际 {bytes_written} bytes"
-        )
-
-    os.replace(tmp_dest, dest)
-    return dest
+            if content_length > 0 and bytes_written < content_length:
+                raise IOError(
+                    f"incomplete download: expected {content_length} bytes, received {bytes_written} bytes"
+                )
+            os.replace(tmp_dest, dest)
+            return dest
+        except Exception as exc:
+            last_error = exc
+            if os.path.exists(tmp_dest):
+                try:
+                    os.remove(tmp_dest)
+                except OSError:
+                    pass
+            if attempt >= attempts:
+                raise
+            logging.getLogger(__name__).warning(
+                "3D resource download interrupted; retrying (%s/%s): %s",
+                attempt,
+                attempts,
+                type(exc).__name__,
+            )
+            time.sleep(min(2.0, 0.25 * (2 ** (attempt - 1))))
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("3D resource download failed")
 
 
 def _to_repo_relative_path(absolute_path: str, repo_root: Path) -> str:

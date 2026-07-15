@@ -35,7 +35,7 @@ def build_openai_chat(
         default_headers=headers,
         temperature=temperature,
         timeout=request_timeout,
-        max_retries=0,
+        max_retries=2,
     )
 
 

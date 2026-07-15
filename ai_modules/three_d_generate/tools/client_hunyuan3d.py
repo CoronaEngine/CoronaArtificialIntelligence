@@ -23,6 +23,28 @@ from ....ai_models.remote_task_runner import RemoteTaskRunner
 logger = logging.getLogger(__name__)
 
 
+def _safe_completion_log_summary(resp: Any) -> Dict[str, Any]:
+    """Keep completion diagnostics without persisting signed download URLs."""
+
+    payload = resp.get("Response", {}) if isinstance(resp, dict) else {}
+    payload = payload if isinstance(payload, dict) else {}
+    files = payload.get("ResultFile3Ds")
+    files = files if isinstance(files, list) else []
+    return {
+        "Status": str(payload.get("Status") or ""),
+        "RequestId": str(payload.get("RequestId") or ""),
+        "ErrorCode": str(payload.get("ErrorCode") or ""),
+        "ErrorMessage": str(payload.get("ErrorMessage") or "")[:240],
+        "ResultCreditConsumed": payload.get("ResultCreditConsumed"),
+        "ResultFile3DCount": len(files),
+        "ResultFile3DTypes": sorted({
+            str(item.get("Type") or "")
+            for item in files
+            if isinstance(item, dict) and str(item.get("Type") or "")
+        }),
+    }
+
+
 class Hunyuan3DClient:
     """腾讯混元生3D API 客户端（TokenHub）"""
 
