@@ -28,6 +28,15 @@ _WIN_INVALID = r'[<>:"/\\|?*\x00-\x1F]'
 logger = logging.getLogger(__name__)
 
 
+def _remote_resource_label(url: str) -> str:
+    try:
+        parsed = urllib.parse.urlsplit(str(url or ""))
+        suffix = Path(parsed.path).suffix.lower() or "resource"
+        return f"{parsed.scheme or 'remote'}:{suffix}"
+    except Exception:
+        return "remote:resource"
+
+
 def _is_placeholder_api_key(value: str) -> bool:
     text = str(value or "").strip().lower()
     if not text:
@@ -637,15 +646,24 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                                 "short_id": "base" if typ == "mesh" else typ,
                             },
                         )
-                        _logger.debug(f"混元3D后台下载+注册完成: {url} -> {relative_path} (file_id={file_id})")
+                        _logger.debug(
+                            "混元3D后台下载+注册完成: remote=%s path=%s file_id=%s",
+                            _remote_resource_label(url),
+                            relative_path,
+                            file_id,
+                        )
 
                 except Exception as e:
-                    _logger.warning(f"混元3D后台下载/注册失败: {url}, err={e}")
+                    _logger.warning(
+                        "混元3D后台下载/注册失败: remote=%s error_type=%s",
+                        _remote_resource_label(url),
+                        type(e).__name__,
+                    )
 
             _logger.info(f"混元3D后台异步下载完成: {object_dir}, mesh count={mesh_count}")
 
         except Exception as e:
-            _logger.error(f"混元3D后台下载异常: {e}")
+            _logger.error("混元3D后台下载异常: error_type=%s", type(e).__name__)
         finally:
             _signal_mesh_ready(object_dir_name)
 
@@ -797,10 +815,18 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                         )
                     )
 
-                    _logger.debug(f"混元3D预览图下载完成: {url} -> {relative_path}")
+                    _logger.debug(
+                        "混元3D预览图下载完成: remote=%s path=%s",
+                        _remote_resource_label(url),
+                        relative_path,
+                    )
 
                 except Exception as e:
-                    _logger.warning(f"混元3D预览图下载失败: {url}, err={e}")
+                    _logger.warning(
+                        "混元3D预览图下载失败: remote=%s error_type=%s",
+                        _remote_resource_label(url),
+                        type(e).__name__,
+                    )
 
             if not preview_parts and not rest_items:
                 raise RuntimeError("未能获取任何下载资源")
