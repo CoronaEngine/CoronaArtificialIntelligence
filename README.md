@@ -1,10 +1,10 @@
 # Quasar
 
-Quasar, or CAI, is the AI runtime used by CabbageEditor. It now exposes a small public facade for host integration while keeping the legacy module loading system compatible.
+Quasar, or CAI, is the AI runtime used by JSUT_Agent. It exposes a small public facade for host integration while keeping the legacy module loading system compatible.
 
-The physical directory remains under CabbageEditor as a submodule. Standalone usage is supported through editable install or by importing the package from its parent directory.
+The physical directory is `Quasar/` inside the JSUT_Agent repository. Standalone usage is supported by importing the package from the repository root.
 
-CabbageEditor-side adapter code imports CAI with the same package name used by external hosts, for example `from Quasar.cai import CAIApp`. CAI package internals still use package-relative imports to keep internal modules movable within the package.
+JSUT_Agent imports the Quasar facade through `from Quasar.cai import CAIApp`. Quasar package internals use package-relative imports to keep internal modules movable within the package.
 
 ## Install For Development
 
@@ -22,7 +22,7 @@ python -m pip install -e ".[web]"
 python -m pip install -e ".[object-recognition]"
 ```
 
-`cabbage` is intentionally empty in this package because the CabbageEditor adapter lives beside the submodule in `plugins/AITool/cai_extensions`.
+The legacy `cabbage` integration is intentionally not included; this repository exposes the Quasar runtime directly.
 
 ## Public Facade
 

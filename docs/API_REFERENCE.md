@@ -1,6 +1,6 @@
-# CAI API Reference
+# Quasar API Reference
 
-This reference describes the public facade added for standalone and host-embedded use. The legacy `ai_service.entrance` module remains available for compatibility, but new host integrations should prefer `Quasar.cai`.
+This reference describes the public Quasar facade for standalone and host-embedded use. The legacy `ai_service.entrance` module remains available for compatibility, but new host integrations should prefer `Quasar.cai`.
 
 ## Import
 
@@ -8,7 +8,7 @@ This reference describes the public facade added for standalone and host-embedde
 from Quasar.cai import CAIApp, CAIRuntime, ChatRequest, StreamEvent
 ```
 
-When CAI is used inside CabbageEditor, AITool imports the same facade through the editor package path and installs `cai_extensions` into the current `CAIApp`.
+When Quasar is embedded in a host application, the host can import the same facade through `Quasar.cai` and install plugins into the current `CAIApp`.
 
 ## CAIApp
 

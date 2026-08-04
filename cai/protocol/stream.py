@@ -14,6 +14,52 @@ class StreamEvent:
     raw: str | None = None
 
     @classmethod
+    def thinking(cls, session_id: str | None = None, **metadata) -> "StreamEvent":
+        return cls("thinking", {}, session_id=session_id, metadata=metadata)
+
+    @classmethod
+    def tool_call(
+        cls,
+        name: str,
+        arguments: dict[str, Any] | None = None,
+        session_id: str | None = None,
+        **metadata,
+    ) -> "StreamEvent":
+        args = arguments or {}
+        return cls(
+            "tool_call",
+            {
+                "name": name,
+                "arguments": json.dumps(args, ensure_ascii=False),
+                "args_parsed": args,
+            },
+            session_id=session_id,
+            metadata=metadata,
+        )
+
+    @classmethod
+    def tool_result(
+        cls,
+        name: str,
+        result: str,
+        session_id: str | None = None,
+        **metadata,
+    ) -> "StreamEvent":
+        return cls("tool_result", {"name": name, "result": result}, session_id=session_id, metadata=metadata)
+
+    @classmethod
+    def content(cls, text: str, session_id: str | None = None, **metadata) -> "StreamEvent":
+        return cls("content", {"content": text}, session_id=session_id, metadata=metadata)
+
+    @classmethod
+    def error(cls, message: str, session_id: str | None = None, **metadata) -> "StreamEvent":
+        return cls("error", {"content": message}, session_id=session_id, metadata=metadata)
+
+    @classmethod
+    def done(cls, session_id: str | None = None, **metadata) -> "StreamEvent":
+        return cls("done", {}, session_id=session_id, metadata=metadata)
+
+    @classmethod
     def from_legacy_chunk(cls, chunk: str | dict[str, Any]) -> "StreamEvent":
         raw = chunk if isinstance(chunk, str) else None
         payload = json.loads(chunk) if isinstance(chunk, str) else dict(chunk)
@@ -32,17 +78,36 @@ class StreamEvent:
         )
 
     def to_dict(self) -> dict[str, Any]:
-        return {
+        result = {
             "event_type": self.event_type,
+            "type": self.event_type,
             "request_id": self.request_id,
             "session_id": self.session_id,
             "sequence": self.sequence,
             "payload": self.payload,
             "metadata": self.metadata,
         }
+        # Preserve the flat event shape consumed by the existing web client.
+        result.update(self.payload)
+        return result
 
     def to_legacy_chunk(self) -> str:
         return self.raw or json.dumps(self.payload, ensure_ascii=False)
+
+    def to_sse(self) -> str:
+        return f"data: {json.dumps(self.to_dict(), ensure_ascii=False)}\n\n"
+
+    @classmethod
+    def from_legacy_dict(cls, value: dict[str, Any]) -> "StreamEvent":
+        data = dict(value)
+        event_type = data.pop("type", data.pop("event_type", "data"))
+        session_id = data.pop("session_id", None)
+        payload = data.pop("payload", None)
+        if isinstance(payload, dict):
+            payload = {**payload, **data}
+        else:
+            payload = data
+        return cls(event_type, payload, session_id=session_id)
 
     @staticmethod
     def _detect_event_type(payload: dict[str, Any], metadata: dict[str, Any]) -> str:

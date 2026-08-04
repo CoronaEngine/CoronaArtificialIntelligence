@@ -1,1 +1,1 @@
-"""Corona Artificial Intelligence package."""
+"""Quasar AI runtime package."""
