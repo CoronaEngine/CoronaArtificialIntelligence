@@ -21,6 +21,8 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+from contextlib import nullcontext
+from dataclasses import dataclass
 from typing import Any, Generator, Optional
 
 from .adapter import (
@@ -45,6 +47,44 @@ from ..ai_tools.context import (
 logger = logging.getLogger(__name__)
 
 WORKFLOW_HEARTBEAT_INTERVAL = 5.0
+
+
+@dataclass(frozen=True)
+class WorkflowExecutionContext:
+    function_id: int
+    session_id: str
+    interface_type: str
+    request_data: Any
+
+
+_scope_factory_lock = threading.RLock()
+_scope_factory: Any = None
+
+
+def register_workflow_execution_scope_factory(factory: Any) -> None:
+    """Install a host-provided context manager factory for workflow runs."""
+    if factory is not None and not callable(factory):
+        raise TypeError("workflow scope factory must be callable or None")
+    global _scope_factory
+    with _scope_factory_lock:
+        _scope_factory = factory
+
+
+def clear_workflow_execution_scope_factory() -> None:
+    register_workflow_execution_scope_factory(None)
+
+
+def _workflow_scope(context: WorkflowExecutionContext):
+    with _scope_factory_lock:
+        factory = _scope_factory
+    if factory is None:
+        return nullcontext()
+    scope = factory(context)
+    if scope is None:
+        return nullcontext()
+    if not hasattr(scope, "__enter__") or not hasattr(scope, "__exit__"):
+        raise TypeError("workflow scope factory must return a context manager")
+    return scope
 
 
 def _annotate_checkpoint_entries(
@@ -162,7 +202,10 @@ def run_workflow(
         )
 
         # 执行工作流
-        final_state: WorkflowState = graph.invoke(state)
+        with _workflow_scope(
+            WorkflowExecutionContext(function_id, session_id, interface_type, request_data)
+        ):
+            final_state: WorkflowState = graph.invoke(state)
 
         # 回写 global_assets 到循环状态（工作流测试模式可控制是否回写）
         final_assets = final_state.get("global_assets")
@@ -256,7 +299,10 @@ def stream_workflow(
                 f"Streaming workflow (no checkpoints, single-yield) "
                 f"function_id={function_id}, session={session_id}"
             )
-            final_state: WorkflowState = graph.invoke(state)
+            with _workflow_scope(
+                WorkflowExecutionContext(function_id, session_id, interface_type, request_data)
+            ):
+                final_state: WorkflowState = graph.invoke(state)
             # 在工作流完整执行完毕时回写 global_assets（工作流测试模式可控制是否回写）
             if not final_state.get("awaiting_review"):
                 final_assets = final_state.get("global_assets")
@@ -300,34 +346,38 @@ def stream_workflow(
             worker_token = set_current_session(session_id)
 
             try:
-                for chunk in graph.stream(state, stream_mode="updates"):
-                    for node_name, node_update in chunk.items():
-                        if not isinstance(node_update, dict):
-                            continue
+                with _workflow_scope(
+                    WorkflowExecutionContext(function_id, session_id, interface_type, request_data)
+                ):
+                    stream_iterator = graph.stream(state, stream_mode="updates")
+                    for chunk in stream_iterator:
+                        for node_name, node_update in chunk.items():
+                            if not isinstance(node_update, dict):
+                                continue
 
-                        if "awaiting_review" in node_update:
-                            ended_awaiting_review = bool(
-                                node_update["awaiting_review"]
+                            if "awaiting_review" in node_update:
+                                ended_awaiting_review = bool(
+                                    node_update["awaiting_review"]
+                                )
+
+                            ga_delta = node_update.get("global_assets")
+                            if isinstance(ga_delta, dict) and ga_delta:
+                                accumulated_assets = deep_merge_dict(
+                                    accumulated_assets, ga_delta
+                                )
+
+                            if node_name not in checkpoints:
+                                continue
+
+                            new_entries = node_update.get("dialogue_entries", [])
+                            if not new_entries:
+                                continue
+
+                            publish_node_entries_event(
+                                session_id,
+                                node_name,
+                                new_entries,
                             )
-
-                        ga_delta = node_update.get("global_assets")
-                        if isinstance(ga_delta, dict) and ga_delta:
-                            accumulated_assets = deep_merge_dict(
-                                accumulated_assets, ga_delta
-                            )
-
-                        if node_name not in checkpoints:
-                            continue
-
-                        new_entries = node_update.get("dialogue_entries", [])
-                        if not new_entries:
-                            continue
-
-                        publish_node_entries_event(
-                            session_id,
-                            node_name,
-                            new_entries,
-                        )
 
                 if accumulated_assets and not ended_awaiting_review:
                     metadata = state.get("metadata", {})
@@ -575,4 +625,7 @@ __all__ = [
     "stream_workflow",
     "stream_workflow_from_request",
     "register_workflow_checkpoints",
+    "WorkflowExecutionContext",
+    "register_workflow_execution_scope_factory",
+    "clear_workflow_execution_scope_factory",
 ]
