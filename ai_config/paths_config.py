@@ -29,15 +29,17 @@ class PathsConfig:
     """路径配置。"""
 
     repo_root: Path
-    backend_root: Path
-    frontend_dist: Path
-    script_dir: Path
     autosave_dir: Path
     config_dir: Path
     assets_model_dir: Path
     object_recognition_db: Path
     screenshots_dir: Optional[Path] = None
     media_local_storage: Optional[Path] = None
+    # Host-specific paths are optional capabilities, not part of CAI's
+    # default layout. Engine adapters may provide them explicitly.
+    backend_root: Optional[Path] = None
+    frontend_dist: Optional[Path] = None
+    script_dir: Optional[Path] = None
 
 
 # ---------------------------------------------------------------------------
@@ -196,9 +198,6 @@ def get_default_paths() -> PathsConfig:
 
     return PathsConfig(
         repo_root=repo_root,
-        backend_root=repo_root / "Backend",
-        frontend_dist=repo_root / "Frontend" / "dist" / "index.html",
-        script_dir=repo_root / "Backend" / "script",
         autosave_dir=autosave_dir,
         config_dir=config_dir,
         assets_model_dir=assets_model_dir,

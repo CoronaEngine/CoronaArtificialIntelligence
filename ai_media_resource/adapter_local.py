@@ -30,11 +30,11 @@ class LocalStorageAdapter(StorageAdapter):
     本地存储适配器
 
     下载资源到本地，返回 file:// URL。
-    桥接 Backend.local_storage.MediaStore。
+    使用注入的 storage_root，未注入时回退到 Quasar 的路径解析器。
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, storage_root: Optional[Path] = None):
+        self._storage_root = Path(storage_root) if storage_root is not None else None
 
     @property
     def save_path(self) -> Path:
@@ -43,6 +43,9 @@ class LocalStorageAdapter(StorageAdapter):
 
     def _resolve_save_path(self) -> Path:
         """解析本地存储路径：优先使用项目路径下的 media/ 目录，未配置时自动推算"""
+        if self._storage_root is not None:
+            self._storage_root.mkdir(parents=True, exist_ok=True)
+            return self._storage_root
         try:
             from ..ai_config.paths_config import get_project_media_dir
 
