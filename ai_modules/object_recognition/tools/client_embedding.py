@@ -9,6 +9,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 import base64
+import os
 from io import BytesIO
 import logging
 import threading
@@ -318,11 +319,20 @@ class RemoteEmbeddingProvider(EmbeddingProvider):
 
 
 def get_embedding_client(
-    api_key: str,
-    model: str,
+    api_key: str = "",
+    model: str = "tongyi-embedding-vision-plus-2026-03-06",
     output_dim: Optional[int] = None,
+    endpoint: Optional[str] = None,
+    timeout: Optional[float] = None,
 ) -> DashscopeEmbeddingClient:
-    """获取 Dashscope 嵌入客户端单例（按 api_key/model/output_dim 缓存）。"""
+    """获取 Dashscope 客户端。
+
+    ``endpoint`` and ``timeout`` are accepted for compatibility with the
+    former generic remote-client API; the Dashscope SDK resolves its endpoint
+    internally and currently owns timeout handling.
+    """
+    del endpoint, timeout
+    api_key = api_key or os.environ.get("DASHSCOPE_API_KEY", "")
     key = (api_key, model, output_dim)
     instance = _CLIENT_INSTANCES.get(key)
     if instance is not None:

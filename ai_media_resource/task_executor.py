@@ -4,7 +4,7 @@
 管理异步任务的提交、执行和结果获取。
 从 MediaResourceRegistry 中剥离，专注于线程池和 Future 管理。
 
-**超时管理**: 支持 DeadlineContext，优先使用 deadline 剩余时间。
+**超时管理**: 根据媒体类型推断等待时间，并支持显式 timeout。
 """
 
 from __future__ import annotations
@@ -28,55 +28,36 @@ from .result import StorageResult
 logger = logging.getLogger(__name__)
 
 
-# 默认等待超时（秒）- 与 DeadlineConfig.DEFAULT 保持一致
+# 默认等待超时（秒）
 _DEFAULT_WAIT_TIMEOUT = 300.0
+_RESOURCE_TIMEOUTS = {
+    "image": 300.0,
+    "video": 600.0,
+    "music": 300.0,
+    "audio": 300.0,
+    "speech": 120.0,
+    "text": 120.0,
+    "detection": 120.0,
+}
 
 
 def _infer_timeout_from_metadata(metadata: Dict[str, Any]) -> float:
     """
     根据任务元数据推断合理的超时时间
 
-    从 metadata 中的 resource_type 推断，与 DeadlineConfig 保持一致。
+    从 metadata 中的 resource_type 推断通用超时时间。
     """
     resource_type = metadata.get("resource_type")
     if not resource_type:
         return _DEFAULT_WAIT_TIMEOUT
 
-    try:
-        from app.utils.deadline import DeadlineConfig
-
-        return DeadlineConfig.get(resource_type)
-    except ImportError:
-        # 降级：手动映射
-        mapping = {
-            "image": 300.0,  # 5分钟
-            "video": 600.0,  # 10分钟
-            "music": 300.0,  # 5分钟
-            "audio": 300.0,
-            "speech": 120.0,  # 2分钟
-            "text": 120.0,
-            "detection": 120.0,
-        }
-        return mapping.get(resource_type.lower(), _DEFAULT_WAIT_TIMEOUT)
+    return _RESOURCE_TIMEOUTS.get(resource_type.lower(), _DEFAULT_WAIT_TIMEOUT)
 
 
 def _get_deadline_remaining(default: float, reserve: float = 5.0) -> float:
-    """从 DeadlineContext 获取剩余时间"""
-    # ... (移除默认值 150.0，改为必须传入)
-    try:
-        from app.utils.deadline import (
-            get_remaining,
-            is_in_task_context,
-            warn_nested_call,
-        )
-
-        if is_in_task_context():
-            warn_nested_call("TaskExecutor.wait()")
-        return get_remaining(reserve=reserve, default=default)
-    except ImportError:
-        return default
-    except Exception:
-        return default
+    """Return the effective wait timeout for a standalone Quasar task."""
+    del reserve  # Reserved for future host-independent deadline contexts.
+    return default
 
 
 class TaskStatus(Enum):

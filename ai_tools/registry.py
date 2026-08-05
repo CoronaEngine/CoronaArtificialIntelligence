@@ -70,15 +70,6 @@ class ToolCategory(str, Enum):
     EXTERNAL = "external"  # 外部/私有工具
     TEST = "test"  # 测试工具
     OTHER = "other"  # 其他
-    # Host application categories
-    COURSE = "course"
-    OUTLINE = "outline"
-    LESSON_PLAN = "lesson_plan"
-    PPT = "ppt"
-    INTERACTIVE = "interactive"
-    HOMEWORK = "homework"
-    GRADING = "grading"
-    GENERAL = "general"
 
 
 # ===========================================================================
@@ -109,11 +100,6 @@ class DependencyType(str, Enum):
     # 其他依赖
     LLM = "llm"  # 需要 LLM 模型
     VLM = "vlm"  # 需要视觉语言模型
-    # Host application services
-    DB_SESSION = "db_session"
-    AI_CLIENT = "ai_client"
-    FILE_STORAGE = "file_storage"
-    FLASK_APP = "flask_app"
 
 
 @dataclass(frozen=False)

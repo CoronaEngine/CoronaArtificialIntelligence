@@ -1,10 +1,10 @@
 # Quasar
 
-Quasar, or CAI, is the AI runtime used by JSUT_Agent. It exposes a small public facade for host integration while keeping the legacy module loading system compatible.
+Quasar, or CAI, is a general-purpose AI runtime for host applications. It exposes a small public facade while keeping the legacy module loading system compatible.
 
-The physical directory is `Quasar/` inside the JSUT_Agent repository. Standalone usage is supported by importing the package from the repository root.
+The package can be used standalone or embedded by a host application. Standalone usage is supported through editable installation or by importing the package from its parent directory.
 
-JSUT_Agent imports the Quasar facade through `from Quasar.cai import CAIApp`. Quasar package internals use package-relative imports to keep internal modules movable within the package.
+Host applications import the facade through `from Quasar.cai import CAIApp`. Quasar package internals use package-relative imports to keep internal modules movable within the package.
 
 ## Install For Development
 
@@ -22,7 +22,7 @@ python -m pip install -e ".[web]"
 python -m pip install -e ".[object-recognition]"
 ```
 
-The legacy `cabbage` integration is intentionally not included; this repository exposes the Quasar runtime directly.
+Optional host integrations can be installed separately from the core runtime.
 
 ## Public Facade
 

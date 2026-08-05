@@ -5,6 +5,7 @@
 """
 
 from dataclasses import dataclass, field
+import os
 
 from ....ai_config.paths_config import get_default_paths
 
@@ -73,6 +74,19 @@ class RecognitionConfig:
     auto_scan_embed: bool = True
     # 每个子文件夹最多读取的图片数量
     auto_scan_max_images: int = 6
+
+    @property
+    def remote_endpoint(self) -> str:
+        """Backward-compatible endpoint name used by older integrations."""
+        return os.environ.get(
+            "DASHSCOPE_EMBEDDING_ENDPOINT",
+            "https://dashscope.aliyuncs.com/api/v1/services/embeddings/multimodal-embedding/multimodal-embedding",
+        )
+
+    @property
+    def remote_timeout(self) -> float:
+        """Backward-compatible client timeout setting."""
+        return float(os.environ.get("DASHSCOPE_EMBEDDING_TIMEOUT", "30"))
 
 
 __all__ = [

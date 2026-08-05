@@ -29,14 +29,6 @@ class ChatRequest:
         )
 
     @classmethod
-    def from_flask_request(cls, flask_request) -> "ChatRequest":
-        """Build a request from a Flask request without depending on Flask."""
-        data = flask_request.get_json(silent=True) or {}
-        if not isinstance(data, dict):
-            raise TypeError("Chat request JSON body must be an object")
-        return cls.from_legacy(data)
-
-    @classmethod
     def from_text(
         cls,
         text: str,
@@ -71,23 +63,3 @@ class ChatRequest:
         metadata.update(self.metadata)
         payload["metadata"] = metadata
         return payload
-
-    @property
-    def message(self) -> str:
-        """Return the conventional text field used by host applications."""
-        value = self.payload.get("message", "")
-        if isinstance(value, str) and value.strip():
-            return value.strip()
-
-        # Also support Quasar's structured integrated-message format.
-        for entry in self.payload.get("llm_content", []) or []:
-            for part in entry.get("part", []) if isinstance(entry, dict) else []:
-                text = part.get("content_text") if isinstance(part, dict) else None
-                if isinstance(text, str) and text.strip():
-                    return text.strip()
-        return ""
-
-    @property
-    def course_id(self) -> Any:
-        """Return an optional host-specific course context identifier."""
-        return self.payload.get("course_id")
