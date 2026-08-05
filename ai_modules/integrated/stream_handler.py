@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 import queue
 
-from typing import Any, Dict
+from typing import Any, Callable, Dict, Optional
 
 from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 
@@ -27,44 +27,29 @@ from .workflow_bridge import resolve_and_stream_workflow
 
 logger = logging.getLogger(__name__)
 
+_global_assets_summarizer: Optional[Callable[[Dict[str, Any]], str]] = None
+
+
+def set_global_assets_summarizer(
+    summarizer: Optional[Callable[[Dict[str, Any]], str]],
+) -> None:
+    """Inject host/domain formatting without coupling the stream core to it."""
+    global _global_assets_summarizer
+    _global_assets_summarizer = summarizer
+
 
 def _summarize_global_assets(assets: Dict[str, Any]) -> str:
-    """将 global_assets 摘要为 Agent 可读的文本。"""
+    """Summarize generic workflow assets; hosts may inject richer formatting."""
+    if _global_assets_summarizer is not None:
+        return _global_assets_summarizer(assets)
     lines = ["[工作流上下文] 以下是之前工作流产生的资产信息，你可以引用："]
-
-    # 模型检索结果
-    mr = assets.get("model_retrieval", {})
-    model_results = mr.get("model_results", [])
-    if model_results:
-        lines.append(f"\n## 可用 3D 模型 ({len(model_results)} 个):")
-        for row in model_results:
-            name = row.get("item_name", "未知")
-            path = row.get("model_path", "")
-            source = row.get("source", "")
-            error = row.get("error", "")
-            if error:
-                lines.append(f"  - {name}: 失败 ({error})")
-            else:
-                lines.append(f"  - {name}: {path} (来源: {source})")
-
-    # 场景组合结果
-    sc = assets.get("scene_composition", {})
-    if sc:
-        scene_path = sc.get("scene_path", "")
-        imported = sc.get("imported_count", 0)
-        review = sc.get("review_result", {})
-        lines.append(f"\n## 场景组合结果:")
-        lines.append(f"  - 场景文件: {scene_path}")
-        lines.append(f"  - 已导入模型: {imported}")
-        if review:
-            lines.append(f"  - 审查: {review.get('overall', 'N/A')} (评分: {review.get('score', 'N/A')})")
-
-    # 多场景设计
-    ms = assets.get("multi_scene", {})
-    approved = ms.get("approved_elements", [])
-    if approved:
-        names = [e.get("name", "?") for e in approved[:10]]
-        lines.append(f"\n## 设计元素 ({len(approved)} 个): {', '.join(names)}")
+    for name, value in assets.items():
+        if isinstance(value, dict):
+            lines.append(f"\n## {name}:")
+            for key, item in list(value.items())[:8]:
+                lines.append(f"  - {key}: {item}")
+        elif value not in (None, "", [], {}):
+            lines.append(f"\n- {name}: {value}")
 
     return "\n".join(lines)
 
@@ -210,4 +195,4 @@ def handle_integrated_entrance_stream_inner(
         yield error_response
 
 
-__all__ = ["handle_integrated_entrance_stream_inner"]
+__all__ = ["handle_integrated_entrance_stream_inner", "set_global_assets_summarizer"]
