@@ -55,6 +55,18 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+_DEPENDENCY_CHECKERS: Dict[DependencyType, Callable[[], bool]] = {}
+
+
+def set_dependency_checker(
+    dependency: DependencyType, checker: Optional[Callable[[], bool]]
+) -> None:
+    """Inject host capabilities without importing host modules."""
+    if checker is None:
+        _DEPENDENCY_CHECKERS.pop(dependency, None)
+    else:
+        _DEPENDENCY_CHECKERS[dependency] = checker
+
 
 # ===========================================================================
 # 工具分类
@@ -692,13 +704,12 @@ def check_dependencies(
                 satisfied = False
 
         elif dep.type == DependencyType.SCENE_SERVICE:
-            try:
-                from Backend.utils import get_scene_service
-
-                get_scene_service()
-                satisfied = True
-            except Exception:
-                satisfied = False
+            checker = _DEPENDENCY_CHECKERS.get(dep.type)
+            if checker is not None:
+                try:
+                    satisfied = bool(checker())
+                except Exception:
+                    satisfied = False
 
         else:
             # 其他依赖类型暂时跳过检查
@@ -717,6 +728,7 @@ __all__ = [
     "ToolDependency",
     "ToolMetadata",
     "ToolLoaderSpec",
+    "set_dependency_checker",
     # 注册表
     "ToolRegistry",
     "get_tool_registry",

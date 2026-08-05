@@ -90,13 +90,6 @@ def warmup_storage() -> None:
     - get_concurrency_manager(): 并发控制管理器
     """
     try:
-        from Backend.local_storage.utils import get_media_store
-
-        get_media_store()
-    except Exception as e:
-        logger.debug(f"媒体存储预热跳过: {e}")
-
-    try:
         from ..ai_media_resource import (
             get_media_registry,
         )
