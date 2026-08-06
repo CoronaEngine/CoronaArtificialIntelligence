@@ -117,14 +117,6 @@ def _get_active_project_path() -> Path:
     return _env_path("CAI_PROJECT_ROOT") or Path(os.getcwd())
 
 
-def _ensure_dir(path: Path) -> Path:
-    try:
-        path.mkdir(parents=True, exist_ok=True)
-    except Exception as exc:
-        logger.debug("创建目录失败 %s: %s", path, exc)
-    return path
-
-
 def get_project_root() -> Path:
     """兼容旧接口：获取仓库根目录。"""
     return _get_aitool_repo_root()
@@ -144,7 +136,7 @@ def get_project_media_dir() -> Path:
         return Path(result)
 
     override = _env_path("CAI_MEDIA_DIR")
-    return _ensure_dir(override or (_get_active_project_path() / "media"))
+    return override or (_get_active_project_path() / "media")
 
 
 def get_project_models_dir() -> Path:
@@ -156,7 +148,7 @@ def get_project_models_dir() -> Path:
         return Path(result)
 
     override = _env_path("CAI_MODELS_DIR")
-    return _ensure_dir(override or (_get_active_project_path() / "models"))
+    return override or (_get_active_project_path() / "models")
 
 
 def get_project_screenshots_dir() -> Path:
@@ -168,7 +160,7 @@ def get_project_screenshots_dir() -> Path:
         return Path(result)
 
     override = _env_path("CAI_SCREENSHOTS_DIR")
-    return _ensure_dir(override or (_get_active_project_path() / "screenshots"))
+    return override or (_get_active_project_path() / "screenshots")
 
 
 def get_project_recognition_db() -> Path:

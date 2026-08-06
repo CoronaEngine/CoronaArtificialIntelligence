@@ -49,9 +49,13 @@ class LocalStorageAdapter(StorageAdapter):
             return get_project_media_dir()
         except Exception:
             pass
-        fallback = Path(__file__).parent.parent / "local_storage"
-        fallback.mkdir(parents=True, exist_ok=True)
-        return fallback
+        return Path(__file__).parent.parent / "local_storage"
+
+    def _prepare_save_path(self) -> Path:
+        """Create the local media directory immediately before a write."""
+        save_path = self.save_path
+        save_path.mkdir(parents=True, exist_ok=True)
+        return save_path
 
     def save_from_url(
         self,
@@ -93,7 +97,7 @@ class LocalStorageAdapter(StorageAdapter):
 
             filename = f"resource_{session_id}_{_id}{ext}"
 
-        local_path = self.save_path / filename
+        local_path = self._prepare_save_path() / filename
 
         # 3. 下载文件
         headers = {
@@ -168,7 +172,7 @@ class LocalStorageAdapter(StorageAdapter):
         _id = uuid.uuid1()
         filename = f"{filename_prefix}_{_id}{ext}"
         # 4. 构建本地路径
-        local_path = self.save_path / filename
+        local_path = self._prepare_save_path() / filename
 
         # 5. 解码并保存base64数据
         try:
