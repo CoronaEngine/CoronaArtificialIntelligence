@@ -16,7 +16,6 @@ def _log_runtime_paths() -> None:
     """在 AI 模块完成启动后输出路径解析结果。"""
     try:
         from ..ai_config.paths_config import (
-            _get_active_project_path,
             get_default_paths,
             get_project_media_dir,
             get_project_models_dir,
@@ -26,14 +25,7 @@ def _log_runtime_paths() -> None:
 
         paths = get_default_paths()
         logger.info("[AITool Paths] ===== AI modules startup path summary =====")
-        logger.info(
-            "[AITool Paths] active_project_path=%s",
-            _get_active_project_path().resolve(),
-        )
         logger.info("[AITool Paths] repo_root=%s", paths.repo_root)
-        logger.info("[AITool Paths] backend_root=%s", paths.backend_root)
-        logger.info("[AITool Paths] frontend_dist=%s", paths.frontend_dist)
-        logger.info("[AITool Paths] script_dir=%s", paths.script_dir)
         logger.info("[AITool Paths] config_dir=%s", paths.config_dir)
         logger.info("[AITool Paths] autosave_dir=%s", paths.autosave_dir)
         logger.info("[AITool Paths] media_local_storage=%s", paths.media_local_storage)

@@ -25,7 +25,11 @@ Workflow 模块 - 基于 LangGraph 的预定义工作流编排
         ...
 """
 
-from .executor import run_workflow
+from .executor import (
+    run_workflow,
+    register_workflow_execution_scope_factory,
+    clear_workflow_execution_scope_factory,
+)
 from .registry import (
     WorkflowRegistry,
     get_workflow_registry,
@@ -43,6 +47,8 @@ from .bridge import (
 
 __all__ = [
     "run_workflow",
+    "register_workflow_execution_scope_factory",
+    "clear_workflow_execution_scope_factory",
     "WorkflowRegistry",
     "get_workflow_registry",
     "BaseWorkflowState",

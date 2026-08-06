@@ -25,7 +25,8 @@ from __future__ import annotations
 
 import logging
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import FIRST_COMPLETED, ThreadPoolExecutor, wait
+import threading
 from typing import Any, Callable, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
@@ -88,13 +89,6 @@ def warmup_storage() -> None:
     - get_conversation_store(): 会话历史存储
     - get_concurrency_manager(): 并发控制管理器
     """
-    try:
-        from Backend.local_storage.utils import get_media_store
-
-        get_media_store()
-    except Exception as e:
-        logger.debug(f"媒体存储预热跳过: {e}")
-
     try:
         from ..ai_media_resource import (
             get_media_registry,
@@ -247,7 +241,11 @@ def warmup_workflows() -> None:
 # ---------------------------------------------------------------------------
 
 
-def warmup_all(*, parallel: bool = True) -> None:
+def warmup_all(
+    *,
+    parallel: bool = True,
+    stop_token: threading.Event | None = None,
+) -> bool:
     """
     预热所有组件（推荐入口）
 
@@ -265,9 +263,18 @@ def warmup_all(*, parallel: bool = True) -> None:
     """
     start_time = time.perf_counter()
 
+    def stopping() -> bool:
+        return stop_token is not None and stop_token.is_set()
+
+    if stopping():
+        return False
+
     # 第一层：配置（必须先完成）
     warmup_configs()
     config_time = time.perf_counter()
+
+    if stopping():
+        return False
 
     if parallel:
         # 第二层：存储、HTTP 客户端、工具、工作流、账号池并行
@@ -278,16 +285,27 @@ def warmup_all(*, parallel: bool = True) -> None:
             ("tools", warmup_tools),
             ("workflows", warmup_workflows),
         ]
-        with ThreadPoolExecutor(
-            max_workers=5, thread_name_prefix="warmup_"
-        ) as executor:
-            futures = {executor.submit(fn): name for name, fn in layer2_tasks}
-            for future in as_completed(futures):
+        executor = ThreadPoolExecutor(max_workers=5, thread_name_prefix="warmup_")
+        futures = {executor.submit(fn): name for name, fn in layer2_tasks}
+        pending = set(futures)
+        cancelled = False
+        while pending:
+            if stopping():
+                cancelled = True
+                for future in pending:
+                    future.cancel()
+                break
+            done, pending = wait(pending, timeout=0.05, return_when=FIRST_COMPLETED)
+            for future in done:
                 name = futures[future]
                 try:
                     future.result()
                 except Exception as e:
                     logger.warning(f"预热 {name} 失败: {e}")
+        executor.shutdown(wait=not cancelled, cancel_futures=cancelled)
+        if cancelled:
+            logger.info("AI system warmup cancelled during shutdown")
+            return False
     else:
         # 串行预热
         warmup_storage()
@@ -296,10 +314,16 @@ def warmup_all(*, parallel: bool = True) -> None:
         warmup_tools()
         warmup_workflows()
 
+    if stopping():
+        return False
+
     layer2_time = time.perf_counter()
 
     # 第三层：Agent
     warmup_agent()
+
+    if stopping():
+        return False
 
     total_time = time.perf_counter() - start_time
     logger.info(
@@ -309,6 +333,7 @@ def warmup_all(*, parallel: bool = True) -> None:
         f"Agent {(time.perf_counter() - layer2_time) * 1000:.1f}ms, "
         f"总计 {total_time * 1000:.1f}ms"
     )
+    return True
 
 
 def warmup_minimal() -> None:

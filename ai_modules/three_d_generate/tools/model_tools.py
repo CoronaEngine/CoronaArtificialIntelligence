@@ -117,41 +117,22 @@ def _submit_deferred_download_job(
     batch_id: str = "",
 ) -> Optional[Dict[str, Any]]:
     """Submit legacy mesh/rest download work to GenerationScheduler if present."""
-    if scheduler is None or not hasattr(scheduler, "submit"):
+    if scheduler is None or not (
+        callable(getattr(scheduler, "submit_deferred_download", None))
+        or callable(getattr(scheduler, "submit", None))
+    ):
         return None
-    try:
-        from plugins.AITool.services.generation_provider_adapter import (
-            DeferredDownloadProvider,
-            ProviderStageRunner,
-        )
-    except Exception:
-        try:
-            from services.generation_provider_adapter import (  # type: ignore
-                DeferredDownloadProvider,
-                ProviderStageRunner,
-            )
-        except Exception:
-            return {
-                "job_id": "",
-                "status": "scheduler_adapter_unavailable",
-                "error": "DeferredDownloadProvider adapter is unavailable",
-            }
-
-    provider = DeferredDownloadProvider(download_fn)
-    runner = ProviderStageRunner(provider)
-    stage_handlers = runner.stage_handlers()
     payload = {
         "job_type": "provider_deferred_download",
         "plan_id": plan_id,
         "session_id": session_id,
         "batch_id": batch_id,
         "download_kwargs": dict(download_kwargs),
-        "_runtime_context": {
-            "generation_provider": provider,
-            "stage_handlers": stage_handlers,
-            "stage_order": ("download",),
-        },
+        "download_fn": download_fn,
     }
+    submit_deferred = getattr(scheduler, "submit_deferred_download", None)
+    if callable(submit_deferred):
+        return submit_deferred(download_fn, dict(download_kwargs), payload)
     return scheduler.submit(payload)
 
 
