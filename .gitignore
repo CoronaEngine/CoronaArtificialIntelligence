@@ -1,53 +1,71 @@
-# ------------------------------
-# Common Python artifacts
-# ------------------------------
-*/__pycache__/
+# Python artifacts and tooling
+__pycache__/
 *.py[cod]
-*.pyo
 *.pyd
 *.so
 *.egg-info/
 .eggs/
+build/
+dist/
+pip-wheel-metadata/
 .mypy_cache/
 .pytest_cache/
 .ruff_cache/
+.pyre/
+.hypothesis/
 .coverage
+.coverage.*
 coverage.xml
 htmlcov/
-*/package-lock.json
-*.toml
-!pyproject.toml
-local_storage/*
+.tox/
 
-# ------------------------------
 # Virtual environments
-# ------------------------------
 .venv/
 venv/
 ENV/
 Env/
 env/
 .python-version
-.tox/
 
-# ------------------------------
-# Logs & temp files
-# ------------------------------
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.key
+*.pem
+
+# Optional runtime output
+/local_storage/
+/media/
+/models/
+/screenshots/
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs and temporary files
 *.log
 *.tmp
+*.temp
+*.bak
 *.swp
+*~
 
-# ------------------------------
-# OS / Editor junk
-# ------------------------------
+# OS and editor metadata
 .DS_Store
 Thumbs.db
+Desktop.ini
 .idea/
 .vscode/
 *.code-workspace
 
-# ------------------------------
-# Docker / Logs
-# ------------------------------
+# Local tooling and dependencies
+.claude/
+.codex/
+.analysis/
+.codegraph/
+node_modules/
+*/package-lock.json
 logs/
 docker.conf
