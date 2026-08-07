@@ -28,6 +28,15 @@ _WIN_INVALID = r'[<>:"/\\|?*\x00-\x1F]'
 logger = logging.getLogger(__name__)
 
 
+def _remote_resource_label(url: str) -> str:
+    try:
+        parsed = urllib.parse.urlsplit(str(url or ""))
+        suffix = Path(parsed.path).suffix.lower() or "resource"
+        return f"{parsed.scheme or 'remote'}:{suffix}"
+    except Exception:
+        return "remote:resource"
+
+
 def _is_placeholder_api_key(value: str) -> bool:
     text = str(value or "").strip().lower()
     if not text:
@@ -41,6 +50,12 @@ def _is_placeholder_api_key(value: str) -> bool:
         "placeholder",
         "changeme",
     } or "yourapikey" in compact
+
+
+def _cfg_get(cfg: Any, key: str, default: Any = None) -> Any:
+    if isinstance(cfg, dict):
+        return cfg.get(key, default)
+    return getattr(cfg, key, default)
 
 
 # ---------------------------------------------------------------------------
@@ -228,6 +243,7 @@ def _download_url_to_dir(
     out_dir: str,
     timeout: float = 120.0,
     preferred_filename: Optional[str] = None,
+    max_attempts: int = 3,
 ) -> str:
     """下载 url 到 out_dir，返回保存后的绝对路径"""
     os.makedirs(out_dir, exist_ok=True)
@@ -257,37 +273,61 @@ def _download_url_to_dir(
         except Exception:
             pass
 
-    # 增强下载鲁棒性，避免 HTTP 连接中途断开导致残留不完整文件
-    with httpx.stream(
-        "GET",
-        url,
-        follow_redirects=True,
-        timeout=httpx.Timeout(timeout, connect=30.0, read=max(timeout, 300.0), write=max(timeout, 300.0)),
-    ) as r:
-        r.raise_for_status()
-        content_length = 0
+    attempts = max(1, min(5, int(max_attempts or 1)))
+    last_error: Exception | None = None
+    for attempt in range(1, attempts + 1):
         try:
-            content_length = int(r.headers.get("content-length", "0"))
-        except (TypeError, ValueError):
-            content_length = 0
+            with httpx.stream(
+                "GET",
+                url,
+                follow_redirects=True,
+                timeout=httpx.Timeout(
+                    timeout,
+                    connect=30.0,
+                    read=max(timeout, 300.0),
+                    write=max(timeout, 300.0),
+                ),
+            ) as r:
+                r.raise_for_status()
+                try:
+                    content_length = int(r.headers.get("content-length", "0"))
+                except (TypeError, ValueError):
+                    content_length = 0
 
-        bytes_written = 0
-        with open(tmp_dest, "wb") as f:
-            for chunk in r.iter_bytes(chunk_size=65536):
-                if chunk:
-                    f.write(chunk)
-                    bytes_written += len(chunk)
-            f.flush()
-            os.fsync(f.fileno())
+                bytes_written = 0
+                with open(tmp_dest, "wb") as f:
+                    for chunk in r.iter_bytes(chunk_size=65536):
+                        if chunk:
+                            f.write(chunk)
+                            bytes_written += len(chunk)
+                    f.flush()
+                    os.fsync(f.fileno())
 
-    if content_length > 0 and bytes_written < content_length:
-        os.remove(tmp_dest)
-        raise IOError(
-            f"文件下载不完整: {url}, 期待 {content_length} bytes, 实际 {bytes_written} bytes"
-        )
-
-    os.replace(tmp_dest, dest)
-    return dest
+            if content_length > 0 and bytes_written < content_length:
+                raise IOError(
+                    f"incomplete download: expected {content_length} bytes, received {bytes_written} bytes"
+                )
+            os.replace(tmp_dest, dest)
+            return dest
+        except Exception as exc:
+            last_error = exc
+            if os.path.exists(tmp_dest):
+                try:
+                    os.remove(tmp_dest)
+                except OSError:
+                    pass
+            if attempt >= attempts:
+                raise
+            logging.getLogger(__name__).warning(
+                "3D resource download interrupted; retrying (%s/%s): %s",
+                attempt,
+                attempts,
+                type(exc).__name__,
+            )
+            time.sleep(min(2.0, 0.25 * (2 ** (attempt - 1))))
+    if last_error is not None:
+        raise last_error
+    raise RuntimeError("3D resource download failed")
 
 
 def _to_repo_relative_path(absolute_path: str, repo_root: Path) -> str:
@@ -336,15 +376,30 @@ class Hunyuan3DGenerate3DInput(BaseModel):
 def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
     hunyuan_config = config.hunyuan3d
 
-    if not getattr(hunyuan_config, 'enable', False):
+    # 兼容 dict / Object，同时直接兜底读 AI_SETTINGS 原始字典
+    enable = _cfg_get(hunyuan_config, "enable", False)
+    if not enable:
+        try:
+            from ....ai_service.entrance import ai_entrance as _fallback_entrance
+            _raw_settings = _fallback_entrance.collector.AI_SETTINGS
+            _hunyuan_raw = _raw_settings.get("hunyuan3d", {}) if isinstance(_raw_settings, dict) else {}
+            if isinstance(_hunyuan_raw, dict) and _hunyuan_raw.get("enable") is True:
+                logger.warning(
+                    "混元3D 配置对象 enable=False 但 AI_SETTINGS 原始字典 enable=True，"
+                    "使用原始字典值覆盖 (config_type=%s)", type(hunyuan_config).__name__
+                )
+                enable = True
+        except Exception:
+            pass
+    if not enable:
         logger.info("混元3D 已禁用 (enable=False)，跳过工具加载")
         return []
 
-    api_key = (hunyuan_config.api_key or "").strip()
+    api_key = (_cfg_get(hunyuan_config, "api_key", "") or "").strip()
 
     # 收集所有可用 AK: api_keys 列表优先, 单 api_key 兜底
     all_keys: List[str] = []
-    api_keys_cfg = getattr(hunyuan_config, 'api_keys', None)
+    api_keys_cfg = _cfg_get(hunyuan_config, "api_keys", None)
     if api_keys_cfg and isinstance(api_keys_cfg, list):
         all_keys.extend(str(k).strip() for k in api_keys_cfg if str(k).strip())
     if api_key and api_key not in all_keys:
@@ -355,7 +410,7 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
             "混元3D api_key 缺失：请在 settings.hunyuan3d.api_key 或 api_keys 中配置"
         )
 
-    configured_concurrent = getattr(hunyuan_config, 'max_concurrent_generations', 1) or 1
+    configured_concurrent = _cfg_get(hunyuan_config, "max_concurrent_generations", 1) or 1
     per_key_concurrent = 1
     try:
         configured_concurrent_value = int(configured_concurrent)
@@ -367,14 +422,18 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
             per_key_concurrent,
             configured_concurrent,
         )
+    region = _cfg_get(hunyuan_config, "region", "ap-guangzhou")
+    endpoint = _cfg_get(hunyuan_config, "endpoint", "tokenhub.tencentmaas.com")
+    request_timeout = float(_cfg_get(hunyuan_config, "request_timeout", 300.0))
+    version = _cfg_get(hunyuan_config, "version", "pro")
     # 创建 client 池: 每个 AK 一个 client, round-robin 分配
     _clients = [
         Hunyuan3DClient(
             api_key=k,
-            region=hunyuan_config.region,
-            endpoint=hunyuan_config.endpoint,
-            timeout=float(hunyuan_config.request_timeout),
-            version=hunyuan_config.version,
+            region=region,
+            endpoint=endpoint,
+            timeout=request_timeout,
+            version=version,
             max_concurrent=per_key_concurrent,
         )
         for k in all_keys
@@ -394,13 +453,13 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
         len(_clients), per_key_concurrent, len(_clients) * per_key_concurrent,
     )
 
-    poll_interval = hunyuan_config.poll_interval
-    poll_timeout = hunyuan_config.poll_timeout
-    default_result_format = hunyuan_config.result_format
-    default_enable_pbr = hunyuan_config.enable_pbr
-    default_generate_type = hunyuan_config.generate_type
-    default_model = hunyuan_config.model
-    default_face_count = hunyuan_config.face_count
+    poll_interval = _cfg_get(hunyuan_config, "poll_interval", 3.0)
+    poll_timeout = _cfg_get(hunyuan_config, "poll_timeout", 600.0)
+    default_result_format = _cfg_get(hunyuan_config, "result_format", "GLB")
+    default_enable_pbr = _cfg_get(hunyuan_config, "enable_pbr", False)
+    default_generate_type = _cfg_get(hunyuan_config, "generate_type", "Normal")
+    default_model = _cfg_get(hunyuan_config, "model", "3.0")
+    default_face_count = _cfg_get(hunyuan_config, "face_count", 500000)
 
     media_registry = get_media_registry()
 
@@ -454,7 +513,7 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                     local_path = _download_url_to_dir(
                         url,
                         str(object_dir),
-                        timeout=float(hunyuan_config.request_timeout),
+                        timeout=request_timeout,
                         preferred_filename=preferred,
                     )
 
@@ -568,15 +627,24 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                                 "short_id": "base" if typ == "mesh" else typ,
                             },
                         )
-                        _logger.debug(f"混元3D后台下载+注册完成: {url} -> {relative_path} (file_id={file_id})")
+                        _logger.debug(
+                            "混元3D后台下载+注册完成: remote=%s path=%s file_id=%s",
+                            _remote_resource_label(url),
+                            relative_path,
+                            file_id,
+                        )
 
                 except Exception as e:
-                    _logger.warning(f"混元3D后台下载/注册失败: {url}, err={e}")
+                    _logger.warning(
+                        "混元3D后台下载/注册失败: remote=%s error_type=%s",
+                        _remote_resource_label(url),
+                        type(e).__name__,
+                    )
 
             _logger.info(f"混元3D后台异步下载完成: {object_dir}, mesh count={mesh_count}")
 
         except Exception as e:
-            _logger.error(f"混元3D后台下载异常: {e}")
+            _logger.error("混元3D后台下载异常: error_type=%s", type(e).__name__)
         finally:
             _signal_mesh_ready(object_dir_name)
 
@@ -700,7 +768,7 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                     local_path = _download_url_to_dir(
                         url,
                         str(object_dir),
-                        timeout=float(hunyuan_config.request_timeout),
+                        timeout=request_timeout,
                         preferred_filename=preferred,
                     )
                     relative_path = _to_repo_relative_path(local_path, repo_root)
@@ -728,10 +796,18 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                         )
                     )
 
-                    _logger.debug(f"混元3D预览图下载完成: {url} -> {relative_path}")
+                    _logger.debug(
+                        "混元3D预览图下载完成: remote=%s path=%s",
+                        _remote_resource_label(url),
+                        relative_path,
+                    )
 
                 except Exception as e:
-                    _logger.warning(f"混元3D预览图下载失败: {url}, err={e}")
+                    _logger.warning(
+                        "混元3D预览图下载失败: remote=%s error_type=%s",
+                        _remote_resource_label(url),
+                        type(e).__name__,
+                    )
 
             if not preview_parts and not rest_items:
                 raise RuntimeError("未能获取任何下载资源")

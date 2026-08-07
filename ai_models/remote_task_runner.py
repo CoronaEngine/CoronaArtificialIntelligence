@@ -5,6 +5,8 @@ import time
 from dataclasses import dataclass
 from typing import Any, Callable, Iterable
 
+import httpx
+
 
 logger = logging.getLogger(__name__)
 
@@ -32,12 +34,14 @@ class RemoteTaskRunner:
         poll_timeout: float,
         sleep_func: Callable[[float], None] = time.sleep,
         clock: Callable[[], float] = time.monotonic,
+        max_consecutive_poll_failures: int = 5,
     ) -> None:
         self.provider_name = str(provider_name or "remote")
         self.poll_interval = max(float(poll_interval), 0.0)
         self.poll_timeout = max(float(poll_timeout), 0.0)
         self._sleep = sleep_func
         self._clock = clock
+        self.max_consecutive_poll_failures = max(1, int(max_consecutive_poll_failures or 1))
 
     def run(
         self,
@@ -59,6 +63,7 @@ class RemoteTaskRunner:
         start = self._clock()
         last_status = ""
         poll_count = 0
+        consecutive_poll_failures = 0
         success = {s.lower() for s in (success_statuses or self.DEFAULT_SUCCESS_STATUSES)}
         failure = {s.lower() for s in (failure_statuses or self.DEFAULT_FAILURE_STATUSES)}
 
@@ -67,7 +72,24 @@ class RemoteTaskRunner:
             if self.poll_timeout and elapsed > self.poll_timeout:
                 raise TimeoutError(f"{provider_task_label} timed out after {self.poll_timeout}s, id={task_id}")
 
-            payload = poll(task_id)
+            try:
+                payload = poll(task_id)
+                consecutive_poll_failures = 0
+            except (httpx.TransportError, ConnectionError) as exc:
+                consecutive_poll_failures += 1
+                if consecutive_poll_failures >= self.max_consecutive_poll_failures:
+                    raise
+                logger.warning(
+                    "[%s] %s poll interrupted; retrying existing task id=%s attempt=%d/%d error=%s",
+                    self.provider_name,
+                    provider_task_label,
+                    task_id,
+                    consecutive_poll_failures,
+                    self.max_consecutive_poll_failures,
+                    type(exc).__name__,
+                )
+                self._sleep(self.poll_interval)
+                continue
             poll_count += 1
             current_status = self._normalize_status(status(payload) if status else self._default_status(payload))
 

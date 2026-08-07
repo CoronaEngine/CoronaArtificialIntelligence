@@ -17,6 +17,7 @@ def build_openai_chat(
     model: str,
     temperature: float,
     request_timeout: float,
+    max_retries: int = 2,
 ) -> BaseChatModel:
     if not provider.api_key:
         raise RuntimeError(
@@ -35,7 +36,7 @@ def build_openai_chat(
         default_headers=headers,
         temperature=temperature,
         timeout=request_timeout,
-        max_retries=0,
+        max_retries=max(0, int(max_retries)),
     )
 
 

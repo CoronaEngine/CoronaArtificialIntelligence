@@ -23,6 +23,28 @@ from ....ai_models.remote_task_runner import RemoteTaskRunner
 logger = logging.getLogger(__name__)
 
 
+def _safe_completion_log_summary(resp: Any) -> Dict[str, Any]:
+    """Keep completion diagnostics without persisting signed download URLs."""
+
+    payload = resp.get("Response", {}) if isinstance(resp, dict) else {}
+    payload = payload if isinstance(payload, dict) else {}
+    files = payload.get("ResultFile3Ds")
+    files = files if isinstance(files, list) else []
+    return {
+        "Status": str(payload.get("Status") or ""),
+        "RequestId": str(payload.get("RequestId") or ""),
+        "ErrorCode": str(payload.get("ErrorCode") or ""),
+        "ErrorMessage": str(payload.get("ErrorMessage") or "")[:240],
+        "ResultCreditConsumed": payload.get("ResultCreditConsumed"),
+        "ResultFile3DCount": len(files),
+        "ResultFile3DTypes": sorted({
+            str(item.get("Type") or "")
+            for item in files
+            if isinstance(item, dict) and str(item.get("Type") or "")
+        }),
+    }
+
+
 class Hunyuan3DClient:
     """腾讯混元生3D API 客户端（TokenHub）"""
 
@@ -68,13 +90,20 @@ class Hunyuan3DClient:
             r = client.post(url, headers=self._headers(), content=payload.encode("utf-8"))
             if r.status_code >= 400:
                 logger.error(
-                    "混元3D HTTP %d: url=%s body_size=%d response=%s",
-                    r.status_code, url, len(payload), r.text[:2000],
+                    "混元3D HTTP %d: url=%s body_size=%d response_size=%d",
+                    r.status_code, url, len(payload), len(r.text or ""),
                 )
             r.raise_for_status()
             resp = r.json()
 
-        logger.debug("混元3D 响应: %s", json.dumps(resp, ensure_ascii=False)[:1000])
+        response = resp.get("Response") if isinstance(resp, dict) and isinstance(resp.get("Response"), dict) else {}
+        logger.debug(
+            "混元3D 响应: keys=%s request_id=%s status=%s error_code=%s",
+            sorted(str(key) for key in resp.keys()) if isinstance(resp, dict) else [],
+            response.get("RequestId") or "",
+            response.get("Status") or "",
+            response.get("ErrorCode") or "",
+        )
 
         # 检查错误（兼容多种返回格式）
         if isinstance(resp, dict):
@@ -293,7 +322,16 @@ class Hunyuan3DClient:
                 poll=lambda job_id: self.query_job(job_id, model=model),
             )
             resp = task.payload
-            logger.info("混元3D 任务完成原始响应: id=%s resp=%s", task.task_id, json.dumps(resp, ensure_ascii=False)[:4000])
+            response = resp.get("Response") if isinstance(resp.get("Response"), dict) else {}
+            result_files = response.get("ResultFile3Ds") if isinstance(response.get("ResultFile3Ds"), list) else []
+            logger.info(
+                "混元3D 任务完成: id=%s request_id=%s status=%s resources=%d error_code=%s",
+                task.task_id,
+                response.get("RequestId") or "",
+                response.get("Status") or "",
+                len(result_files),
+                response.get("ErrorCode") or "",
+            )
             downloads = self._extract_downloads(resp)
             if not downloads:
                 raise RuntimeError(f"混元3D 任务完成但无下载文件: id={task.task_id}, resp_keys={list(resp.keys())}")
@@ -366,8 +404,10 @@ class Hunyuan3DClient:
                     downloads.append({"name": k, "url": v, "type": "GLB"})
 
         if not downloads:
-            logger.error("混元3D 无法提取下载文件, data type=%s, data=%s",
-                         type(raw_data).__name__,
-                         json.dumps(raw_data, ensure_ascii=False)[:3000] if raw_data else "None")
+            logger.error(
+                "混元3D 无法提取下载文件, data_type=%s data_keys=%s",
+                type(raw_data).__name__,
+                sorted(str(key) for key in raw_data.keys()) if isinstance(raw_data, dict) else [],
+            )
 
         return downloads

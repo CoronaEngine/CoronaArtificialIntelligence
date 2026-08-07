@@ -511,6 +511,7 @@ def get_chat_model(
     model_name: str | None = None,
     temperature: float | None = None,
     request_timeout: float | None = None,
+    max_retries: int | None = None,
     category: str = "agent",  # 默认使用 agent 类别
 ):
     """
@@ -547,6 +548,7 @@ def get_chat_model(
     model = model_name or chat_cfg.model
     temp = temperature if temperature is not None else chat_cfg.temperature
     timeout = request_timeout if request_timeout is not None else chat_cfg.request_timeout
+    retries = 2 if max_retries is None else max(0, int(max_retries))
 
     # 池模式：尝试从对应池获取
     if _check_pool_available():
@@ -584,6 +586,7 @@ def get_chat_model(
                             model=account.model or model,
                             temperature=temp,
                             request_timeout=timeout,
+                            max_retries=retries,
                         )
                         # 注意：这里不释放账号，因为 LLM 是长期持有的
                         # 后续可以考虑实现更复杂的释放策略
@@ -615,6 +618,7 @@ def get_chat_model(
         model=model,
         temperature=temp,
         request_timeout=timeout,
+        max_retries=retries,
     )
     logger.debug(f"使用降级模式获取 LLM: provider={provider_key}, model={model}")
     return llm
