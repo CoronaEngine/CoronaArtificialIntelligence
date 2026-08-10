@@ -60,10 +60,6 @@ modules:
     enabled: true
     description: "场景分解"
 
-  - name: scene_placement
-    enabled: false
-    description: "场景布置（引擎相关，需宣主侧提供实现后启用）"
-
   # 识别与检测模块
   - name: object_recognition
     enabled: true
