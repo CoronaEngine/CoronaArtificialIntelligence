@@ -13,10 +13,9 @@ from ....ai_service.entrance import ai_entrance
 def PROVIDERS() -> List[Dict[str, Any]]:
     return [
         {
-            "name": "deepseek",
+            "name": "example",
             "type": "openai-compatible",
-            "base_url": "https://api.deepseek.com/v1",
-            "api_key_env": "CORONA_DEEPSEEK_API_KEY",
-            "api_key": "",
+            "base_url": "https://api.example.com/v1",
+            "api_key": "YOUR_API_KEY_HERE",
         },
     ]
