@@ -67,24 +67,6 @@ def _cfg_get(cfg: Any, key: str, default: Any = None) -> Any:
 
 _MESH_READY_EVENTS: Dict[str, threading.Event] = {}
 _MESH_EVENTS_LOCK = threading.Lock()
-_DEFERRED_DOWNLOAD_SCHEDULER: Any = None
-
-
-def set_deferred_download_scheduler(scheduler: Any) -> None:
-    """Inject an optional GenerationScheduler for mesh/rest downloads.
-
-    Default remains the legacy background thread path. Tests and the LANChat
-    generation control plane can set this to move deferred provider downloads
-    under scheduler download-stage limits.
-    """
-    global _DEFERRED_DOWNLOAD_SCHEDULER
-    _DEFERRED_DOWNLOAD_SCHEDULER = scheduler
-
-
-def get_deferred_download_scheduler() -> Any:
-    return _DEFERRED_DOWNLOAD_SCHEDULER
-
-
 def _register_mesh_event(object_id: str) -> None:
     """为指定 object_id 创建 mesh 下载完成 Event（必须在后台线程启动前调用）。"""
     with _MESH_EVENTS_LOCK:
@@ -120,71 +102,6 @@ def wait_for_mesh_ready(object_id: str) -> bool:
         _MESH_READY_EVENTS.pop(object_id, None)
 
     return True
-
-
-def _submit_deferred_download_job(
-    *,
-    scheduler: Any,
-    download_fn: Any,
-    download_kwargs: Dict[str, Any],
-    plan_id: str = "",
-    session_id: str = "",
-    batch_id: str = "",
-) -> Optional[Dict[str, Any]]:
-    """Submit legacy mesh/rest download work to GenerationScheduler if present."""
-    if scheduler is None or not (
-        callable(getattr(scheduler, "submit_deferred_download", None))
-        or callable(getattr(scheduler, "submit", None))
-    ):
-        return None
-    payload = {
-        "job_type": "provider_deferred_download",
-        "plan_id": plan_id,
-        "session_id": session_id,
-        "batch_id": batch_id,
-        "download_kwargs": dict(download_kwargs),
-        "download_fn": download_fn,
-    }
-    submit_deferred = getattr(scheduler, "submit_deferred_download", None)
-    if callable(submit_deferred):
-        return submit_deferred(download_fn, dict(download_kwargs), payload)
-    return scheduler.submit(payload)
-
-
-def _deferred_download_control(
-    *,
-    scheduler: Any,
-    scheduled: Optional[Dict[str, Any]],
-) -> Dict[str, Any]:
-    """Return safe execution policy for deferred mesh/rest downloads.
-
-    If a scheduler is injected, provider downloads must not silently fall back
-    to ad-hoc background threads. A queue-full scheduler response is backpressure,
-    not permission to bypass the scheduler.
-    """
-    if scheduled and scheduled.get("job_id"):
-        return {
-            "mode": "scheduled",
-            "start_legacy_thread": False,
-            "job_id": str(scheduled.get("job_id") or ""),
-            "status": str(scheduled.get("status") or "queued"),
-            "error": "",
-        }
-    if scheduler is not None and hasattr(scheduler, "submit"):
-        return {
-            "mode": "rejected",
-            "start_legacy_thread": False,
-            "job_id": "",
-            "status": str((scheduled or {}).get("status") or "rejected"),
-            "error": str((scheduled or {}).get("error") or "deferred download scheduler rejected job"),
-        }
-    return {
-        "mode": "legacy_thread",
-        "start_legacy_thread": True,
-        "job_id": "",
-        "status": "legacy_thread",
-        "error": "",
-    }
 
 
 def _sanitize_name(s: str, allow_spaces: bool = False) -> str:
@@ -823,7 +740,6 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
             }
             if rest_items:
                 _register_mesh_event(object_dir_name)
-                scheduler = get_deferred_download_scheduler()
                 download_kwargs = {
                     "object_dir": object_dir,
                     "repo_root": repo_root,
@@ -835,41 +751,21 @@ def load_hunyuan3d_tools(config: AIConfig) -> List[StructuredTool]:
                     "session_id": session_id,
                     "registry": registry,
                 }
-                scheduled = _submit_deferred_download_job(
-                    scheduler=scheduler,
-                    download_fn=_hunyuan_download_rest_files_async,
-                    download_kwargs=download_kwargs,
-                    session_id=session_id,
-                    batch_id=object_dir_name,
+                bg_thread = threading.Thread(
+                    target=_hunyuan_download_rest_files_async,
+                    kwargs=download_kwargs,
+                    daemon=True,
                 )
-                mesh_download_control = _deferred_download_control(
-                    scheduler=scheduler,
-                    scheduled=scheduled,
+                bg_thread.start()
+                mesh_download_control = {
+                    "mode": "thread",
+                    "job_id": "",
+                    "status": "started",
+                    "error": "",
+                }
+                _logger.info(
+                    f"混元3D后台异步任务已启动: {object_dir}, 将下载并注册 {len(rest_items)} 个资源"
                 )
-                if mesh_download_control["mode"] == "scheduled":
-                    _logger.info(
-                        "混元3D mesh 下载已提交 GenerationScheduler: %s, job=%s, resources=%d",
-                        object_dir,
-                        mesh_download_control["job_id"],
-                        len(rest_items),
-                    )
-                elif mesh_download_control["start_legacy_thread"]:
-                    bg_thread = threading.Thread(
-                        target=_hunyuan_download_rest_files_async,
-                        kwargs=download_kwargs,
-                        daemon=True,
-                    )
-                    bg_thread.start()
-                    _logger.info(
-                        f"混元3D后台异步任务已启动: {object_dir}, 将下载并注册 {len(rest_items)} 个资源"
-                    )
-                else:
-                    _signal_mesh_ready(object_dir_name)
-                    _logger.warning(
-                        "混元3D mesh 下载未启动：GenerationScheduler 拒绝任务 status=%s error=%s",
-                        mesh_download_control["status"],
-                        mesh_download_control["error"],
-                    )
 
             return build_success_result(
                 parts=preview_parts,
