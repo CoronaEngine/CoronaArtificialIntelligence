@@ -90,6 +90,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         dependencies=[],
         requires_config=False,
         source="tools.test",
+        tags={"test"},
     )
 
     # -----------------------------------------------------------------------
@@ -108,6 +109,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         ],
         requires_config=True,
         source="tools.text_tools",
+        tags={"public", "conversation"},
     )
 
     # -----------------------------------------------------------------------
@@ -130,6 +132,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         ],
         requires_config=True,
         source="tools.omni.image_tools",
+        tags={"public", "conversation"},
     )
 
     # -----------------------------------------------------------------------
@@ -148,6 +151,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         ],
         requires_config=True,
         source="tools.omni.video_tools",
+        tags={"public", "conversation"},
     )
 
     # -----------------------------------------------------------------------
@@ -166,6 +170,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         ],
         requires_config=True,
         source="tools.omni.speech_tools",
+        tags={"public", "conversation"},
     )
 
     # -----------------------------------------------------------------------
@@ -184,6 +189,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         ],
         requires_config=True,
         source="tools.omni.music_tools",
+        tags={"public", "conversation"},
     )
 
     # -----------------------------------------------------------------------
@@ -201,6 +207,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         ],
         requires_config=True,
         source="tools.omni.omni_tools",
+        tags={"public", "conversation"},
     )
 
 # -----------------------------------------------------------------------
@@ -214,6 +221,7 @@ def _register_builtin_loaders(registry: ToolRegistry) -> None:
         dependencies=[],
         requires_config=True,
         source="tools.hunyuan3d_tools",
+        tags={"public", "scene_generation"},
     )
 
 # -----------------------------------------------------------------------
@@ -276,6 +284,17 @@ def load_tools(config: AIConfig) -> List[BaseTool]:
     return registry.list_tools()
 
 
+def load_public_tools(config: AIConfig) -> List[BaseTool]:
+    """Load the registry and return only tools approved for general agents.
+
+    Runtime and engine-native tools remain registered for dedicated providers,
+    but are intentionally excluded from this public assistant surface.
+    """
+
+    load_tools(config)
+    return get_tool_registry().get_by_tag("public")
+
+
 def get_tools_by_category(category: str) -> List[BaseTool]:
     """按分类获取工具（需先调用 load_tools）"""
     return get_tool_registry().get_by_category(category)
@@ -288,6 +307,7 @@ def get_tool_by_name(name: str) -> BaseTool | None:
 
 __all__ = [
     "load_tools",
+    "load_public_tools",
     "get_tools_by_category",
     "get_tool_by_name",
 ]

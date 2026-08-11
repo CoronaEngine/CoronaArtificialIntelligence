@@ -211,6 +211,7 @@ class ToolLoaderSpec:
     dependencies: List[ToolDependency] = field(default_factory=list)
     requires_config: bool = True
     source: str = ""
+    tags: Set[str] = field(default_factory=set)
 
 
 # ===========================================================================
@@ -291,6 +292,7 @@ class ToolRegistry:
         dependencies: Optional[List[ToolDependency]] = None,
         requires_config: bool = True,
         source: str = "",
+        tags: Optional[Set[str]] = None,
     ) -> None:
         """注册工具加载器
 
@@ -311,9 +313,10 @@ class ToolRegistry:
                 ToolLoaderSpec(
                     loader=loader,
                     category=category,
-                    dependencies=dependencies or [],
-                    requires_config=requires_config,
-                    source=source,
+                dependencies=dependencies or [],
+                requires_config=requires_config,
+                source=source,
+                tags=set(tags or set()),
                 )
             )
             logger.debug(f"Registered tool loader from {source}")
@@ -462,6 +465,7 @@ class ToolRegistry:
                                 category=spec.category,
                                 dependencies=spec.dependencies,
                                 source=spec.source,
+                                tags=spec.tags,
                                 overwrite=False,
                             )
                             count += 1
