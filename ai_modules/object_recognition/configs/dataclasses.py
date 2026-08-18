@@ -45,7 +45,7 @@ class RecognitionConfig:
     """物体识别整体配置"""
 
     # 是否启用物体识别模块
-    enable: bool = True
+    enable: bool = False
     # 嵌入模型配置
     embedding: EmbeddingModelConfig = \
         field(default_factory=EmbeddingModelConfig)
@@ -71,7 +71,7 @@ class RecognitionConfig:
     # 扫描根目录路径（空字符串表示不扫描）
     auto_scan_dir: str = field(default_factory=_default_assets_model_path)
     # 是否自动嵌入并入库未登记的子文件夹（False 时仅输出警告）
-    auto_scan_embed: bool = True
+    auto_scan_embed: bool = False
     # 每个子文件夹最多读取的图片数量
     auto_scan_max_images: int = 6
 

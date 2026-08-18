@@ -17,6 +17,10 @@ from .capabilities import (
     RuntimeHealth,
     SessionChange,
     SessionSnapshot,
+    VectorMatch,
+    VectorQuery,
+    VectorRecord,
+    VectorStore,
 )
 from .errors import (
     AdapterConnectionError,
@@ -56,6 +60,10 @@ __all__ = [
     "RuntimeHealth",
     "SessionChange",
     "SessionSnapshot",
+    "VectorMatch",
+    "VectorQuery",
+    "VectorRecord",
+    "VectorStore",
     "AdapterConnectionError",
     "BufferFlushError",
     "CapabilityUnavailableError",
