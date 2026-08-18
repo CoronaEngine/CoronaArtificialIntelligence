@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import subprocess
 import sys
 import threading
@@ -61,6 +62,29 @@ assert loaded == [], loaded
 """
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, check=False)
     assert result.returncode == 0, result.stderr or result.stdout
+
+
+def test_core_source_has_no_adapter_compatibility_or_host_imports():
+    core = Path(__file__).resolve().parents[1] / "cai"
+    forbidden = ("Quasar.adapters", "Quasar.compat", "app", "database")
+    violations = []
+    for source_path in core.rglob("*.py"):
+        tree = ast.parse(source_path.read_text(encoding="utf-8"), filename=str(source_path))
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                names = [alias.name for alias in node.names]
+            elif isinstance(node, ast.ImportFrom):
+                if node.level > 1:
+                    violations.append(f"{source_path.name}: relative import level {node.level}")
+                names = [node.module or ""] if node.level == 0 else []
+            else:
+                continue
+            violations.extend(
+                f"{source_path.name}: {name}"
+                for name in names
+                if name.startswith(forbidden)
+            )
+    assert violations == []
 
 
 def test_memory_capabilities_implement_public_contracts():

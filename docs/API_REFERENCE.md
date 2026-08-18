@@ -1,18 +1,18 @@
 # Quasar API Reference
 
-This reference describes the public Quasar facade for standalone and host-embedded use. The legacy `ai_service.entrance` module remains available for compatibility, but new host integrations should prefer `Quasar.cai`.
+This reference describes the public Quasar facade for standalone and host-embedded use. Runtime entrances, registries, adapters, and tools are explicitly assembled; Core does not discover legacy modules or persistence backends.
 
 ## Import
 
 ```python
-from Quasar.cai import CAIApp, CAIRuntime, ChatRequest, StreamEvent
+from Quasar.cai import CAIApp, CAIRuntime, ChatRequest, RuntimeBuilder, StreamEvent
 ```
 
 When Quasar is embedded in a host application, the host can import the same facade through `Quasar.cai` and install plugins into the current `CAIApp`.
 
 ## CAIApp
 
-`CAIApp(runtime=None)` is the host-facing facade.
+`CAIApp(runtime)` is the host-facing facade. New integrations should pass an explicitly built runtime.
 
 Main methods:
 
@@ -27,11 +27,11 @@ Main methods:
 
 ## CAIRuntime
 
-`CAIRuntime` owns runtime metadata, capabilities, entrance handlers, plugin manager, and lazy registry references.
+`CAIRuntime` owns runtime metadata, capabilities, entrance handlers, plugins, and lifecycle. Its defaults are in-memory capabilities only.
 
 Useful methods:
 
-- `get_registry(name)`: resolve a registry such as `tool`, `workflow`, `media`, `conversation`, or `model`.
+- `get_registry(name)`: resolve an explicitly registered registry.
 - `set_registry(name, registry)`: override a registry for tests or host integration.
 - `set_capability(name, value)` and `get_capability(name)`: attach host capabilities to the runtime.
 - `register_tool_loader_registrar(registrar)`: attach host tool loader registration callbacks.
