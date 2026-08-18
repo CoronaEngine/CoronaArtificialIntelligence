@@ -2,6 +2,32 @@ from .app import CAIApp, get_default_app, set_default_app
 from .plugins import CAIPlugin, PluginManager
 from .runtime import CAIRuntime, get_default_runtime, set_default_runtime
 from .protocol import AIError, ChatRequest, StreamEvent
+from .capabilities import (
+    ArtifactInput,
+    ArtifactRef,
+    Capability,
+    ComponentHealth,
+    ConversationSnapshot,
+    DomainEvent,
+    HealthStatus,
+    InProcessEventBus,
+    MemoryArtifactStore,
+    MemoryConversationStore,
+    MemorySessionStore,
+    RuntimeHealth,
+    SessionChange,
+    SessionSnapshot,
+)
+from .errors import (
+    AdapterConnectionError,
+    BufferFlushError,
+    CapabilityUnavailableError,
+    ConfigurationError,
+    HostIntegrationError,
+    PersistenceError,
+    QuasarRuntimeError,
+    ToolExecutionError,
+)
 
 
 __all__ = [
@@ -16,4 +42,26 @@ __all__ = [
     "get_default_runtime",
     "set_default_app",
     "set_default_runtime",
+    "ArtifactInput",
+    "ArtifactRef",
+    "Capability",
+    "ComponentHealth",
+    "ConversationSnapshot",
+    "DomainEvent",
+    "HealthStatus",
+    "InProcessEventBus",
+    "MemoryArtifactStore",
+    "MemoryConversationStore",
+    "MemorySessionStore",
+    "RuntimeHealth",
+    "SessionChange",
+    "SessionSnapshot",
+    "AdapterConnectionError",
+    "BufferFlushError",
+    "CapabilityUnavailableError",
+    "ConfigurationError",
+    "HostIntegrationError",
+    "PersistenceError",
+    "QuasarRuntimeError",
+    "ToolExecutionError",
 ]
