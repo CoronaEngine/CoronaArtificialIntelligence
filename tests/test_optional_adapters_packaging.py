@@ -81,6 +81,9 @@ def test_sqlite_vector_adapter_round_trip(tmp_path):
     assert [match.key for match in matches] == ["alpha", "beta"]
     assert matches[0].metadata == {"label": "Alpha"}
     assert matches[0].score > matches[1].score
+    assert store.get_metadata("alpha") == {"label": "Alpha"}
+    assert {key for key, _metadata in store.list_metadata()} == {"alpha", "beta"}
+    assert store.count() == 2
     assert store.delete(["alpha"]) == 1
     assert [match.key for match in store.search(VectorQuery((1.0, 0.0, 0.0)))] == ["beta"]
     store.close()

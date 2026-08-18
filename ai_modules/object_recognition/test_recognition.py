@@ -17,6 +17,7 @@ import logging
 import os
 import sys
 import tempfile
+from pathlib import Path
 
 import numpy as np
 
@@ -231,7 +232,7 @@ def test_end_to_end():
             embedding = client.embed_for_storage(image_paths=[], text=desc)
         except Exception as e:
             db.close()
-            os.remove(db_path)
+            Path(db_path).unlink(missing_ok=True)
             print(f"  跳过: 云端 embedding 服务不可用: {e}")
             return
         db.insert_object(

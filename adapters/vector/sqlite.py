@@ -194,6 +194,31 @@ class SQLiteVectorStore:
                 ) from exc
         return deleted
 
+    def get_metadata(self, record_key: str) -> dict[str, Any] | None:
+        connection = self._require_started("get_metadata")
+        with self._lock:
+            row = connection.execute(
+                "SELECT metadata FROM vector_metadata WHERE record_key = ?", (record_key,)
+            ).fetchone()
+        return None if row is None else json.loads(row[0])
+
+    def list_metadata(self, *, limit: int = 100) -> tuple[tuple[str, dict[str, Any]], ...]:
+        if limit <= 0:
+            raise ValueError("limit must be greater than zero")
+        connection = self._require_started("list_metadata")
+        with self._lock:
+            rows = connection.execute(
+                "SELECT record_key, metadata FROM vector_metadata ORDER BY id DESC LIMIT ?",
+                (limit,),
+            ).fetchall()
+        return tuple((key, json.loads(metadata)) for key, metadata in rows)
+
+    def count(self) -> int:
+        connection = self._require_started("count")
+        with self._lock:
+            row = connection.execute("SELECT COUNT(*) FROM vector_metadata").fetchone()
+        return int(row[0])
+
     def flush(self, timeout: float | None = None) -> None:
         connection = self._require_started("flush")
         with self._lock:
