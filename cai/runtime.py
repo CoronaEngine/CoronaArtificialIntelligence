@@ -39,15 +39,6 @@ class LazyRegistryRef:
         return getattr(self.resolve(), name)
 
 
-def _load_default_ai_entrance():
-    from ..ai_service import entrance
-
-    entrance_cls = entrance.ai_entrance
-    if not entrance_cls.if_import:
-        entrance_cls.reimport()
-    return entrance_cls
-
-
 def _capability_name(name: str | Capability) -> str:
     return name.value if isinstance(name, Capability) else str(name)
 
@@ -67,7 +58,7 @@ class CAIRuntime:
         registries: dict[str, Any] | None = None,
         capabilities: dict[str | Capability, Any] | None = None,
     ) -> None:
-        self._ai_entrance_provider = ai_entrance_provider or _load_default_ai_entrance
+        self._ai_entrance_provider = ai_entrance_provider
         self.metadata: dict[str, Any] = {}
         self.entrance_handlers: dict[str, Any] = {}
         self._state = "new"
@@ -92,6 +83,12 @@ class CAIRuntime:
         return self._state
 
     def get_ai_entrance(self):
+        if self._ai_entrance_provider is None:
+            raise CapabilityUnavailableError(
+                "AI entrance is not configured",
+                component="model",
+                operation="resolve_entrance",
+            )
         return self._ai_entrance_provider()
 
     def chat_stream(self, payload: dict) -> Iterator[str]:
@@ -118,7 +115,14 @@ class CAIRuntime:
         return getattr(self.get_ai_entrance(), name)
 
     def get_registry(self, name: str):
-        registry = self.registries[name]
+        try:
+            registry = self.registries[name]
+        except KeyError as exc:
+            raise CapabilityUnavailableError(
+                f"registry is not configured: {name}",
+                component=name,
+                operation="resolve_registry",
+            ) from exc
         if isinstance(registry, LazyRegistryRef):
             return registry.resolve()
         return registry
@@ -292,19 +296,7 @@ class CAIRuntime:
 
     @staticmethod
     def _create_default_registries() -> dict[str, Any]:
-        return {
-            "config": LazyRegistryRef("..ai_config.ai_config", "get_ai_config"),
-            "tool": LazyRegistryRef("..ai_tools.registry", "get_tool_registry"),
-            "workflow": LazyRegistryRef("..ai_workflow.registry", "get_workflow_registry"),
-            "workflow_command": LazyRegistryRef(
-                "..ai_workflow.command_registry", "get_workflow_command_registry"
-            ),
-            "media": LazyRegistryRef("..ai_media_resource", "get_media_registry"),
-            "conversation": LazyRegistryRef(
-                "..ai_agent.conversation_store", "get_conversation_store"
-            ),
-            "model": LazyRegistryRef("..ai_models.base_pool", "get_pool_registry"),
-        }
+        return {}
 
 
 def _health_rank(status: HealthStatus) -> int:

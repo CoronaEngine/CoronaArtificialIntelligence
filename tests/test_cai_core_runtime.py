@@ -15,6 +15,7 @@ from Quasar.cai import (
     BufferFlushError,
     CAIRuntime,
     Capability,
+    CapabilityUnavailableError,
     ComponentHealth,
     ConfigurationError,
     ConversationSnapshot,
@@ -36,6 +37,16 @@ def test_default_runtime_uses_functional_in_memory_capabilities():
     assert isinstance(runtime.require_capability(Capability.SESSION_STORE), MemorySessionStore)
     assert isinstance(runtime.require_capability(Capability.ARTIFACT_STORE), MemoryArtifactStore)
     assert {thread.ident for thread in threading.enumerate()} == before
+
+
+def test_default_runtime_does_not_discover_legacy_entrances_or_registries():
+    runtime = CAIRuntime()
+
+    assert runtime.registries == {}
+    with pytest.raises(CapabilityUnavailableError):
+        runtime.get_ai_entrance()
+    with pytest.raises(CapabilityUnavailableError):
+        runtime.get_registry("tool")
 
 
 def test_core_import_does_not_load_optional_packages():
