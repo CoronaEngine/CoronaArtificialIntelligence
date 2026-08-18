@@ -4,6 +4,40 @@ from __future__ import annotations
 import warnings
 from typing import Any
 
+from ...cai.config import RuntimeConfig
+
+
+class LegacyConfigAdapter:
+    """Translate the supported legacy dictionary shape into RuntimeConfig."""
+
+    @staticmethod
+    def from_dict(data: dict[str, Any]) -> RuntimeConfig:
+        warnings.warn(
+            "LegacyConfigAdapter is deprecated; construct RuntimeConfig explicitly",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        chat = data.get("chat") if isinstance(data.get("chat"), dict) else {}
+        runtime = data.get("runtime") if isinstance(data.get("runtime"), dict) else {}
+        values: dict[str, Any] = {}
+        request_timeout = chat.get("request_timeout", data.get("request_timeout"))
+        if request_timeout is not None:
+            values["request_timeout"] = request_timeout
+        shutdown_timeout = runtime.get("shutdown_timeout", data.get("shutdown_timeout"))
+        if shutdown_timeout is not None:
+            values["shutdown_timeout"] = shutdown_timeout
+        max_concurrency = runtime.get(
+            "max_concurrency",
+            runtime.get("max_workers", data.get("max_concurrency", data.get("max_workers"))),
+        )
+        if max_concurrency is not None:
+            values["max_concurrency"] = max_concurrency
+        for key in ("log_level", "persistence_policy"):
+            value = runtime.get(key, data.get(key))
+            if value is not None:
+                values[key] = value
+        return RuntimeConfig(**values)
+
 def _manager():
     return _resolve_manager()
 
@@ -127,6 +161,7 @@ def get_session_accounts(session_id: str) -> dict[str, Any]:
 
 
 __all__ = [
+    "LegacyConfigAdapter",
     "init_session", "update_session_state", "update_session_progress",
     "record_step_start", "record_step_retry", "record_step_complete",
     "append_session_output", "set_session_error", "record_account_usage_to_session",

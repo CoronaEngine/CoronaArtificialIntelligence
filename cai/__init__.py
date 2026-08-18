@@ -1,6 +1,15 @@
 from .app import CAIApp, get_default_app, set_default_app
 from .plugins import CAIPlugin, PluginManager
 from .runtime import CAIRuntime, get_default_runtime, set_default_runtime
+from .builder import RuntimeBuilder
+from .config import RuntimeConfig
+from .tools import (
+    CapabilityToolRegistry,
+    ToolAvailability,
+    ToolContext,
+    ToolRegistration,
+    ToolSpec,
+)
 from .protocol import AIError, ChatRequest, StreamEvent
 from .capabilities import (
     ArtifactInput,
@@ -39,6 +48,13 @@ __all__ = [
     "CAIApp",
     "CAIPlugin",
     "CAIRuntime",
+    "RuntimeBuilder",
+    "RuntimeConfig",
+    "CapabilityToolRegistry",
+    "ToolAvailability",
+    "ToolContext",
+    "ToolRegistration",
+    "ToolSpec",
     "ChatRequest",
     "PluginManager",
     "StreamEvent",

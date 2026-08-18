@@ -70,6 +70,8 @@ class CAIRuntime:
         self._ai_entrance_provider = ai_entrance_provider or _load_default_ai_entrance
         self.metadata: dict[str, Any] = {}
         self.entrance_handlers: dict[str, Any] = {}
+        self._state = "new"
+        self._started_components: list[str] = []
         self.capabilities: dict[str, Any] = create_core_defaults()
         self._capability_specs: dict[str, _CapabilitySpec] = {
             name: _CapabilitySpec(required=True) for name in self.capabilities
@@ -84,8 +86,6 @@ class CAIRuntime:
         from .plugins import PluginManager
 
         self.plugin_manager = PluginManager(self)
-        self._state = "new"
-        self._started_components: list[str] = []
 
     @property
     def state(self) -> str:
