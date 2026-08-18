@@ -1,5 +1,5 @@
 """Artifact storage adapters."""
 
-from .local import LocalFileArtifactStore
+from .local import LocalFileArtifactStore, LocalFileArtifactStoreConfig
 
-__all__ = ["LocalFileArtifactStore"]
+__all__ = ["LocalFileArtifactStore", "LocalFileArtifactStoreConfig"]

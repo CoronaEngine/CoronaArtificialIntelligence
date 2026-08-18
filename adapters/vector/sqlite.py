@@ -6,6 +6,7 @@ import importlib
 import json
 import sqlite3
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Sequence
 
@@ -19,6 +20,18 @@ from ...cai.capabilities import (
 from ...cai.errors import AdapterConnectionError, HostIntegrationError, PersistenceError
 
 
+@dataclass(frozen=True)
+class SQLiteVectorStoreConfig:
+    database: Path
+    vector_dim: int
+
+    def __init__(self, database: str | Path, *, vector_dim: int) -> None:
+        if vector_dim <= 0:
+            raise ValueError("vector_dim must be greater than zero")
+        object.__setattr__(self, "database", Path(database).expanduser())
+        object.__setattr__(self, "vector_dim", vector_dim)
+
+
 class SQLiteVectorStore:
     """A lazy SQLite vector adapter.
 
@@ -26,7 +39,19 @@ class SQLiteVectorStore:
     dependency loading happen during :meth:`start`.
     """
 
-    def __init__(self, database: str | Path, *, vector_dim: int) -> None:
+    def __init__(
+        self,
+        database: str | Path | SQLiteVectorStoreConfig,
+        *,
+        vector_dim: int | None = None,
+    ) -> None:
+        if isinstance(database, SQLiteVectorStoreConfig):
+            if vector_dim is not None:
+                raise ValueError("vector_dim must be supplied through the config object")
+            vector_dim = database.vector_dim
+            database = database.database
+        if vector_dim is None:
+            raise ValueError("vector_dim is required")
         if vector_dim <= 0:
             raise ValueError("vector_dim must be greater than zero")
         self.database = Path(database).expanduser().resolve()

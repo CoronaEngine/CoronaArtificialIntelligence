@@ -1,5 +1,5 @@
 """Vector storage adapters."""
 
-from .sqlite import SQLiteVectorStore
+from .sqlite import SQLiteVectorStore, SQLiteVectorStoreConfig
 
-__all__ = ["SQLiteVectorStore"]
+__all__ = ["SQLiteVectorStore", "SQLiteVectorStoreConfig"]

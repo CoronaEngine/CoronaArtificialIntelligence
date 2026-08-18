@@ -3,15 +3,25 @@ from __future__ import annotations
 
 import secrets
 import threading
+from dataclasses import dataclass
 from pathlib import Path
 
 from ...cai.capabilities import ArtifactInput, ArtifactRef, ComponentHealth, HealthStatus
 from ...cai.errors import HostIntegrationError
 
 
-class LocalFileArtifactStore:
+@dataclass(frozen=True)
+class LocalFileArtifactStoreConfig:
+    root: Path
+
     def __init__(self, root: str | Path) -> None:
-        self.root = Path(root).resolve()
+        object.__setattr__(self, "root", Path(root).expanduser())
+
+
+class LocalFileArtifactStore:
+    def __init__(self, root: str | Path | LocalFileArtifactStoreConfig) -> None:
+        configured_root = root.root if isinstance(root, LocalFileArtifactStoreConfig) else root
+        self.root = Path(configured_root).resolve()
         self._started = False
         self._lock = threading.RLock()
 

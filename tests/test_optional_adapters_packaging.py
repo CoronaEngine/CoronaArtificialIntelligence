@@ -91,3 +91,16 @@ def test_object_recognition_is_disabled_by_default():
     from Quasar.ai_modules.object_recognition.configs.dataclasses import RecognitionConfig
 
     assert RecognitionConfig().enable is False
+
+
+def test_file_and_vector_adapters_accept_their_own_typed_configs(tmp_path):
+    from Quasar.adapters.artifacts import LocalFileArtifactStore, LocalFileArtifactStoreConfig
+    from Quasar.adapters.vector import SQLiteVectorStore, SQLiteVectorStoreConfig
+
+    artifact_config = LocalFileArtifactStoreConfig(tmp_path / "artifacts")
+    vector_config = SQLiteVectorStoreConfig(tmp_path / "vectors.db", vector_dim=3)
+
+    assert LocalFileArtifactStore(artifact_config).root == artifact_config.root.resolve()
+    vector_store = SQLiteVectorStore(vector_config)
+    assert vector_store.database == vector_config.database.resolve()
+    assert vector_store.vector_dim == 3
