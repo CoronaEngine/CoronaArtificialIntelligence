@@ -4,9 +4,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
-import yaml
-
-
 logger = logging.getLogger(__name__)
 
 
@@ -97,6 +94,8 @@ class PluginManager:
         modules_path: str | Path,
         package_base: str | None = None,
     ) -> dict[str, Any]:
+        import yaml
+
         config_path = Path(config_path)
         modules_path = Path(modules_path)
         with config_path.open("r", encoding="utf-8") as stream:
