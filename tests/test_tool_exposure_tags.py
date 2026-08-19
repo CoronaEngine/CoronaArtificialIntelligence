@@ -1,6 +1,6 @@
 import unittest
 
-from editor.plugins.AITool.Quasar.ai_tools.registry import ToolCategory, ToolRegistry
+from Quasar.ai_tools.registry import ToolCategory, ToolRegistry
 
 
 class _DummyTool:
